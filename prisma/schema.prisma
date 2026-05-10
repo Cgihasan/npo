@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      String   @default("VIEWER")
+  createdAt DateTime @default(now())
+}
+
+model Donor {
+  id       String    @id @default(cuid())
+  name     String
+  email    String?
+  phone    String?
+  address  String?
+  pan      String?
+  receipts Receipt[]
+}
+
+model Vendor {
+  id       String    @id @default(cuid())
+  name     String
+  email    String?
+  phone    String?
+  gstin    String?
+  payments Payment[]
+}
+
+model Account {
+  id           String        @id @default(cuid())
+  name         String
+  type         String
+  balance      Float         @default(0)
+  transactions Transaction[]
+}
+
+model Receipt {
+  id          String   @id @default(cuid())
+  receiptNo   String   @unique
+  date        DateTime
+  donorId     String
+  type        String
+  amount      Float
+  paymentMode String
+  referenceNo String?
+  accountId   String
+  narration   String?
+  attachment  String?
+  createdAt   DateTime @default(now())
+  donor       Donor    @relation(fields: [donorId], references: [id])
+}
+
+model Payment {
+  id          String   @id @default(cuid())
+  voucherNo   String   @unique
+  date        DateTime
+  vendorId    String
+  type        String
+  amount      Float
+  paymentMode String
+  chequeNo    String?
+  bankName    String?
+  accountId   String
+  narration   String?
+  attachment  String?
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now())
+  vendor      Vendor   @relation(fields: [vendorId], references: [id])
+}
+
+model ContraEntry {
+  id            String   @id @default(cuid())
+  entryNo       String   @unique
+  date          DateTime
+  transferType  String
+  fromAccountId String
+  toAccountId   String
+  amount        Float
+  reference     String?
+  narration     String?
+  createdAt     DateTime @default(now())
+}
+
+model Transaction {
+  id        String   @id @default(cuid())
+  accountId String
+  debit     Float    @default(0)
+  credit    Float    @default(0)
+  refType   String
+  refId     String
+  date      DateTime
+  createdAt DateTime @default(now())
+  account   Account  @relation(fields: [accountId], references: [id])
+}
