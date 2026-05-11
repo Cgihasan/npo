@@ -38,6 +38,7 @@ import {
 import { ReceiptVoucher } from "@/components/receipts/ReceiptVoucher";
 import { exportToPDF } from "@/lib/export";
 import { toast } from "sonner";
+import { deleteReceipt } from "@/app/actions/receipts";
 
 export default function ReceiptsPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -48,6 +49,8 @@ export default function ReceiptsPage() {
 
   const [selectedReceipt, setSelectedReceipt] = useState<any>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
 
   useEffect(() => {
@@ -75,6 +78,21 @@ export default function ReceiptsPage() {
       toast.error("Failed to generate PDF.");
     } finally {
       setIsPrinting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedReceipt) return;
+    try {
+      setIsDeleting(true);
+      await deleteReceipt(selectedReceipt.id);
+      setReceipts(receipts.filter(r => r.id !== selectedReceipt.id));
+      toast.success("Receipt deleted successfully");
+      setIsDeleteAlertOpen(false);
+    } catch (error) {
+      toast.error("Failed to delete receipt");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -126,9 +144,13 @@ export default function ReceiptsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="Donation">Donation</SelectItem>
-              <SelectItem value="Membership Fee">Membership Fee</SelectItem>
-              <SelectItem value="Grant">Grant</SelectItem>
+              <SelectItem value="General Donation">General Donation</SelectItem>
+              <SelectItem value="Special Donation">Special Donation</SelectItem>
+              <SelectItem value="Bank Charges">Bank Charges</SelectItem>
+              <SelectItem value="Interest Capitalized From Bank">Interest Capitalized From Bank</SelectItem>
+              <SelectItem value="Subscription">Subscription</SelectItem>
+              <SelectItem value="Deposit Reverse">Deposit Reverse</SelectItem>
+              <SelectItem value="Cancellation Reverse">Cancellation Reverse</SelectItem>
             </SelectContent>
           </Select>
           {(searchTerm || dateFilter || typeFilter !== "all") && (
@@ -184,7 +206,10 @@ export default function ReceiptsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => {
+                          setSelectedReceipt(receipt);
+                          setIsPreviewOpen(true);
+                        }}>
                           <FileText className="mr-2 h-4 w-4" /> View Details
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => {
@@ -193,10 +218,18 @@ export default function ReceiptsPage() {
                         }}>
                           <Printer className="mr-2 h-4 w-4" /> Print Receipt
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Edit className="mr-2 h-4 w-4" /> Edit
+                        <DropdownMenuItem asChild>
+                          <Link href={`/receipts/${receipt.id}/edit`}>
+                            <Edit className="mr-2 h-4 w-4" /> Edit
+                          </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
+                        <DropdownMenuItem 
+                          className="text-destructive"
+                          onClick={() => {
+                            setSelectedReceipt(receipt);
+                            setIsDeleteAlertOpen(true);
+                          }}
+                        >
                           <Trash className="mr-2 h-4 w-4" /> Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -228,6 +261,32 @@ export default function ReceiptsPage() {
             >
               <Printer className="mr-2 h-4 w-4" />
               {isPrinting ? "Generating PDF..." : "Download PDF"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Are you absolutely sure?</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              This action cannot be undone. This will permanently delete the receipt
+              {selectedReceipt && <span className="font-bold"> {selectedReceipt.receiptNo}</span>} and remove its data from our servers.
+            </p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsDeleteAlertOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleDelete}
+              variant="destructive"
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

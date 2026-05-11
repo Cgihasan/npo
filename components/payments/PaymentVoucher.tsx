@@ -30,8 +30,8 @@ export const PaymentVoucher = React.forwardRef<HTMLDivElement, PaymentVoucherPro
         {/* Content */}
         <div className="space-y-6">
           <div className="flex justify-between py-2 border-b">
-            <span className="text-gray-500 font-medium">Paid To:</span>
-            <span className="font-bold text-lg">{payment.vendor?.name || "N/A"}</span>
+            <span className="text-gray-500 font-medium">Payment Category:</span>
+            <span className="text-gray-800 font-medium">{payment.category}</span>
           </div>
 
           <div className="flex justify-between py-2 border-b">

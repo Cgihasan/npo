@@ -28,13 +28,14 @@ import { useRouter } from "next/navigation";
 
 import { useEffect, useState } from "react";
 import { getVendors, getAssetAccounts } from "@/app/actions/masters";
-import { createPayment } from "@/app/actions/payments";
+import { createPayment, updatePayment, getNextVoucherNumber } from "@/app/actions/payments";
 
 const paymentFormSchema = z.object({
   voucherNo: z.string(),
   date: z.string(),
-  vendorId: z.string().min(1, "Please select a vendor."),
   type: z.string().min(1, "Please select a payment type."),
+  category: z.string().min(1, "Please select an account category."),
+  accountType: z.string().min(1, "Please select an account type."),
   amount: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
     message: "Amount must be a positive number.",
   }),
@@ -47,20 +48,19 @@ const paymentFormSchema = z.object({
 
 type PaymentFormValues = z.infer<typeof paymentFormSchema>;
 
-export function PaymentForm() {
+interface PaymentFormProps {
+  initialData?: any;
+}
+
+export function PaymentForm({ initialData }: PaymentFormProps) {
   const router = useRouter();
-  const [vendors, setVendors] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [vendorsList, accountsList] = await Promise.all([
-          getVendors(),
-          getAssetAccounts(),
-        ]);
-        setVendors(vendorsList);
+        const accountsList = await getAssetAccounts();
         setAccounts(accountsList);
       } catch (error) {
         toast.error("Failed to load master data.");
@@ -72,20 +72,52 @@ export function PaymentForm() {
   const form = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentFormSchema),
     defaultValues: {
-      voucherNo: `PAY-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
-      date: new Date().toISOString().split('T')[0],
-      amount: "",
+      voucherNo: initialData?.voucherNo || "Auto-generated",
+      date: initialData?.date 
+        ? new Date(initialData.date).toISOString().split('T')[0] 
+        : new Date().toISOString().split('T')[0],
+      type: initialData?.type || "",
+      category: initialData?.category || "",
+      accountType: initialData?.accountType || "",
+      amount: initialData?.amount?.toString() || "",
+      paymentMode: initialData?.paymentMode || "",
+      chequeNo: initialData?.chequeNo || "",
+      bankName: initialData?.bankName || "",
+      accountId: initialData?.accountId || "",
+      narration: initialData?.narration || "",
     },
   });
+
+  const selectedDate = form.watch("date");
+
+  useEffect(() => {
+    async function updateVoucherNo() {
+      if (selectedDate && !initialData) {
+        try {
+          const nextNo = await getNextVoucherNumber(selectedDate);
+          form.setValue("voucherNo", nextNo);
+        } catch (error) {
+          console.error("Failed to fetch next voucher number:", error);
+        }
+      }
+    }
+    updateVoucherNo();
+  }, [selectedDate, form, initialData]);
 
   async function onSubmit(data: PaymentFormValues) {
     try {
       setIsSubmitting(true);
-      await createPayment(data);
-      toast.success("Payment voucher created!");
+      if (initialData?.id) {
+        await updatePayment(initialData.id, data);
+        toast.success("Payment updated successfully!");
+      } else {
+        await createPayment(data);
+        toast.success("Payment voucher created!");
+      }
       router.push("/payments");
+      router.refresh();
     } catch (error) {
-      toast.error("Failed to create payment.");
+      toast.error(initialData?.id ? "Failed to update payment." : "Failed to create payment.");
     } finally {
       setIsSubmitting(false);
     }
@@ -107,8 +139,11 @@ export function PaymentForm() {
                   <FormItem>
                     <FormLabel>Voucher No.</FormLabel>
                     <FormControl>
-                      <Input {...field} readOnly />
+                      <Input {...field} readOnly className="bg-muted font-mono" />
                     </FormControl>
+                    <FormDescription>
+                      Sequential based on year.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -128,28 +163,6 @@ export function PaymentForm() {
               />
               <FormField
                 control={form.control}
-                name="vendorId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Paid To (Vendor)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a vendor" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {vendors.map((vendor) => (
-                          <SelectItem key={vendor.id} value={vendor.id}>{vendor.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
                 name="type"
                 render={({ field }) => (
                   <FormItem>
@@ -161,13 +174,65 @@ export function PaymentForm() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Salary">Salary</SelectItem>
-                        <SelectItem value="Utilities">Utilities</SelectItem>
-                        <SelectItem value="Rent">Rent</SelectItem>
-                        <SelectItem value="Program">Program</SelectItem>
-                        <SelectItem value="Office">Office</SelectItem>
-                        <SelectItem value="Travel">Travel</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
+                        <SelectItem value="Registration & Paper Works">Registration & Paper Works</SelectItem>
+                        <SelectItem value="Printing Expenese">Printing Expenese</SelectItem>
+                        <SelectItem value="Office Expenses">Office Expenses</SelectItem>
+                        <SelectItem value="Office Rent Advance">Office Rent Advance</SelectItem>
+                        <SelectItem value="Office Stationery">Office Stationery</SelectItem>
+                        <SelectItem value="Legal Advisor">Legal Advisor</SelectItem>
+                        <SelectItem value="Tea Expenses">Tea Expenses</SelectItem>
+                        <SelectItem value="Office Equipments">Office Equipments</SelectItem>
+                        <SelectItem value="Furniture">Furniture</SelectItem>
+                        <SelectItem value="Islamic Book Purchased">Islamic Book Purchased</SelectItem>
+                        <SelectItem value="Delivery Charges">Delivery Charges</SelectItem>
+                        <SelectItem value="Bank Charges">Bank Charges</SelectItem>
+                        <SelectItem value="Office Rent">Office Rent</SelectItem>
+                        <SelectItem value="Electricity">Electricity</SelectItem>
+                        <SelectItem value="Telephone & Internet Bills">Telephone & Internet Bills</SelectItem>
+                        <SelectItem value="Events Expenses">Events Expenses</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Account Category</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Indirect Expenses">Indirect Expenses</SelectItem>
+                        <SelectItem value="Deposits (Assets)">Deposits (Assets)</SelectItem>
+                        <SelectItem value="Fixed Assets">Fixed Assets</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="accountType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Account Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select account type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Revenue Exp">Revenue Exp</SelectItem>
+                        <SelectItem value="Other Exp">Other Exp</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

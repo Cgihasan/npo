@@ -9,7 +9,7 @@ export async function getTransactions() {
   
   const [receipts, payments, contra] = await Promise.all([
     db.receipt.findMany({ include: { donor: true }, orderBy: { date: "desc" }, take: 10 }),
-    db.payment.findMany({ include: { vendor: true }, orderBy: { date: "desc" }, take: 10 }),
+    db.payment.findMany({ orderBy: { date: "desc" }, take: 10 }),
     db.contraEntry.findMany({ orderBy: { date: "desc" }, take: 10 })
   ]);
 
@@ -101,11 +101,9 @@ export async function getDashboardStats() {
 
   const [receiptsTotal, paymentsTotal, cashStats, bankStats] = await Promise.all([
     db.receipt.aggregate({
-      where: { date: { gte: startOfMonth } },
       _sum: { amount: true }
     }),
     db.payment.aggregate({
-      where: { date: { gte: startOfMonth } },
       _sum: { amount: true }
     }),
     db.transaction.aggregate({

@@ -15,14 +15,14 @@ export default async function DashboardPage() {
       value: `₹${stats.totalReceipts.toLocaleString()}`, 
       icon: Receipt, 
       color: "text-emerald-500", 
-      trend: "Current Month" 
+      trend: "Overall" 
     },
     { 
       title: "Total Payments", 
       value: `₹${stats.totalPayments.toLocaleString()}`, 
       icon: Wallet, 
       color: "text-amber-500", 
-      trend: "Current Month" 
+      trend: "Overall" 
     },
     { 
       title: "Cash in Hand", 

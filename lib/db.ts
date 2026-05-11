@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@generated/prisma";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 
 const prismaClientSingleton = () => {
@@ -15,3 +15,5 @@ const db = globalThis.prisma ?? prismaClientSingleton();
 export default db;
 
 if (process.env.NODE_ENV !== "production") globalThis.prisma = db;
+
+// Triggering reload for new schema fields

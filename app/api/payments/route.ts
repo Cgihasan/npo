@@ -13,8 +13,9 @@ export async function POST(req: Request) {
     const { 
       voucherNo, 
       date, 
-      vendorId, 
       type, 
+      category,
+      accountType,
       amount, 
       paymentMode, 
       chequeNo,
@@ -23,18 +24,18 @@ export async function POST(req: Request) {
       narration 
     } = body;
 
-    if (!voucherNo || !date || !vendorId || !amount || !accountId) {
+    if (!voucherNo || !date || !amount || !accountId) {
       return new NextResponse("Missing required fields", { status: 400 });
     }
 
     const result = await db.$transaction(async (tx) => {
-      // 1. Create the Payment
       const payment = await tx.payment.create({
         data: {
           voucherNo,
           date: new Date(date),
-          vendorId,
           type,
+          category,
+          accountType,
           amount,
           paymentMode,
           chequeNo,
@@ -44,17 +45,6 @@ export async function POST(req: Request) {
         },
       });
 
-      // 2. Update the Asset Account Balance (Cash/Bank) - DECREMENT
-      await tx.account.update({
-        where: { id: accountId },
-        data: {
-          balance: {
-            decrement: amount,
-          },
-        },
-      });
-
-      // 3. Create Transaction record (Credit to Asset)
       await tx.transaction.create({
         data: {
           accountId,
@@ -84,9 +74,6 @@ export async function GET(req: Request) {
     }
 
     const payments = await db.payment.findMany({
-      include: {
-        vendor: true,
-      },
       orderBy: {
         date: "desc",
       },

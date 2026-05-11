@@ -28,13 +28,16 @@ import { useRouter } from "next/navigation";
 
 import { useEffect, useState } from "react";
 import { getDonors, getAssetAccounts } from "@/app/actions/masters";
-import { createReceipt } from "@/app/actions/receipts";
+import { createReceipt, updateReceipt, getNextReceiptNumber } from "@/app/actions/receipts";
 
 const receiptFormSchema = z.object({
   receiptNo: z.string(),
   date: z.string(),
-  donorId: z.string().min(1, "Please select a donor."),
+  donorId: z.string().optional(),
   type: z.string().min(1, "Please select a receipt type."),
+  category: z.string().min(1, "Please select an account category."),
+  accountType: z.string().min(1, "Please select an account type."),
+  eventName: z.string().optional(),
   amount: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
     message: "Amount must be a positive number.",
   }),
@@ -46,7 +49,11 @@ const receiptFormSchema = z.object({
 
 type ReceiptFormValues = z.infer<typeof receiptFormSchema>;
 
-export function ReceiptForm() {
+interface ReceiptFormProps {
+  initialData?: any;
+}
+
+export function ReceiptForm({ initialData }: ReceiptFormProps) {
   const router = useRouter();
   const [donors, setDonors] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -71,20 +78,53 @@ export function ReceiptForm() {
   const form = useForm<ReceiptFormValues>({
     resolver: zodResolver(receiptFormSchema),
     defaultValues: {
-      receiptNo: `RCP-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
-      date: new Date().toISOString().split('T')[0],
-      amount: "",
+      receiptNo: initialData?.receiptNo || "Auto-generated",
+      date: initialData?.date 
+        ? new Date(initialData.date).toISOString().split('T')[0] 
+        : new Date().toISOString().split('T')[0],
+      donorId: initialData?.donorId || "none",
+      type: initialData?.type || "",
+      category: initialData?.category || "",
+      accountType: initialData?.accountType || "",
+      eventName: initialData?.eventName || "None",
+      amount: initialData?.amount?.toString() || "",
+      paymentMode: initialData?.paymentMode || "",
+      referenceNo: initialData?.referenceNo || "",
+      accountId: initialData?.accountId || "",
+      narration: initialData?.narration || "",
     },
   });
+
+  const selectedDate = form.watch("date");
+
+  useEffect(() => {
+    async function updateReceiptNo() {
+      if (selectedDate && !initialData) {
+        try {
+          const nextNo = await getNextReceiptNumber(selectedDate);
+          form.setValue("receiptNo", nextNo);
+        } catch (error) {
+          console.error("Failed to fetch next receipt number:", error);
+        }
+      }
+    }
+    updateReceiptNo();
+  }, [selectedDate, form, initialData]);
 
   async function onSubmit(data: ReceiptFormValues) {
     try {
       setIsSubmitting(true);
-      await createReceipt(data);
-      toast.success("Receipt created successfully!");
+      if (initialData?.id) {
+        await updateReceipt(initialData.id, data);
+        toast.success("Receipt updated successfully!");
+      } else {
+        await createReceipt(data);
+        toast.success("Receipt created successfully!");
+      }
       router.push("/receipts");
+      router.refresh();
     } catch (error) {
-      toast.error("Failed to create receipt.");
+      toast.error(initialData?.id ? "Failed to update receipt." : "Failed to create receipt.");
     } finally {
       setIsSubmitting(false);
     }
@@ -106,8 +146,11 @@ export function ReceiptForm() {
                   <FormItem>
                     <FormLabel>Receipt No.</FormLabel>
                     <FormControl>
-                      <Input {...field} readOnly />
+                      <Input {...field} readOnly className="bg-muted font-mono" />
                     </FormControl>
+                    <FormDescription>
+                      Generated based on year and sequence.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -130,7 +173,7 @@ export function ReceiptForm() {
                 name="donorId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Received From (Donor)</FormLabel>
+                    <FormLabel>Received From Donor</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
@@ -138,6 +181,7 @@ export function ReceiptForm() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        <SelectItem value="none">None / Anonymous</SelectItem>
                         {donors.map((donor) => (
                           <SelectItem key={donor.id} value={donor.id}>{donor.name}</SelectItem>
                         ))}
@@ -160,11 +204,83 @@ export function ReceiptForm() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Donation">Donation</SelectItem>
-                        <SelectItem value="Membership Fee">Membership Fee</SelectItem>
-                        <SelectItem value="Grant">Grant</SelectItem>
-                        <SelectItem value="Event">Event</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
+                        <SelectItem value="General Donation">General Donation</SelectItem>
+                        <SelectItem value="Special Donation">Special Donation</SelectItem>
+                        <SelectItem value="Bank Charges">Bank Charges</SelectItem>
+                        <SelectItem value="Interest Capitalized From Bank">Interest Capitalized From Bank</SelectItem>
+                        <SelectItem value="Subscription">Subscription</SelectItem>
+                        <SelectItem value="Deposit Reverse">Deposit Reverse</SelectItem>
+                        <SelectItem value="Cancellation Reverse">Cancellation Reverse</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Account Category</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Direct Incomes">Direct Incomes</SelectItem>
+                        <SelectItem value="Indirect Incomes">Indirect Incomes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="accountType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Account Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select account type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Donation A/C">Donation A/C</SelectItem>
+                        <SelectItem value="Revesal Charges">Revesal Charges</SelectItem>
+                        <SelectItem value="Bank Interest">Bank Interest</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="eventName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Event Name</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select event (optional)" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="Fund Raise For Islamic Books">Fund Raise For Islamic Books</SelectItem>
+                        <SelectItem value="Fund Raise For Air Conditioner">Fund Raise For Air Conditioner</SelectItem>
+                        <SelectItem value="Fund Raise For Islamic Class 1st">Fund Raise For Islamic Class 1st</SelectItem>
+                        <SelectItem value="Fund Raise For NRC/CAA/NPR Seminar">Fund Raise For NRC/CAA/NPR Seminar</SelectItem>
+                        <SelectItem value="Islamic Events 2023 - Madani Jan">Islamic Events 2023 - Madani Jan</SelectItem>
+                        <SelectItem value="Islamic Events 2023 - Madani Feb">Islamic Events 2023 - Madani Feb</SelectItem>
+                        <SelectItem value="Fundraise For Equipment 2023">Fundraise For Equipment 2023</SelectItem>
+                        <SelectItem value="None">None</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

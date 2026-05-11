@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../node_modules/@generated/prisma"
 }
 
 datasource db {
@@ -31,7 +32,6 @@ model Vendor {
   email    String?
   phone    String?
   gstin    String?
-  payments Payment[]
 }
 
 model Account {
@@ -46,8 +46,11 @@ model Receipt {
   id          String   @id @default(cuid())
   receiptNo   String   @unique
   date        DateTime
-  donorId     String
+  donorId     String?
   type        String
+  category    String?
+  accountType String?
+  eventName   String?
   amount      Float
   paymentMode String
   referenceNo String?
@@ -55,15 +58,16 @@ model Receipt {
   narration   String?
   attachment  String?
   createdAt   DateTime @default(now())
-  donor       Donor    @relation(fields: [donorId], references: [id])
+  donor       Donor?   @relation(fields: [donorId], references: [id])
 }
 
 model Payment {
   id          String   @id @default(cuid())
   voucherNo   String   @unique
   date        DateTime
-  vendorId    String
   type        String
+  category    String?
+  accountType String?
   amount      Float
   paymentMode String
   chequeNo    String?
@@ -73,7 +77,6 @@ model Payment {
   attachment  String?
   status      String   @default("PENDING")
   createdAt   DateTime @default(now())
-  vendor      Vendor   @relation(fields: [vendorId], references: [id])
 }
 
 model ContraEntry {

@@ -29,7 +29,7 @@ import { motion } from "framer-motion";
 
 import { useEffect, useState } from "react";
 import { getAssetAccounts } from "@/app/actions/masters";
-import { createContra } from "@/app/actions/contra";
+import { createContra, updateContra } from "@/app/actions/contra";
 
 const contraFormSchema = z.object({
   entryNo: z.string(),
@@ -46,7 +46,11 @@ const contraFormSchema = z.object({
 
 type ContraFormValues = z.infer<typeof contraFormSchema>;
 
-export function ContraForm() {
+interface ContraFormProps {
+  initialData?: any;
+}
+
+export function ContraForm({ initialData }: ContraFormProps) {
   const router = useRouter();
   const [accounts, setAccounts] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,30 +61,36 @@ export function ContraForm() {
         const accountsList = await getAssetAccounts();
         setAccounts(accountsList);
         
-        // Find default cash/bank accounts
-        const cashAcc = accountsList.find((a: any) => a.type === "CASH");
-        const bankAcc = accountsList.find((a: any) => a.type === "BANK");
-        
-        if (cashAcc && bankAcc) {
-          form.setValue("fromAccountId", cashAcc.id);
-          form.setValue("toAccountId", bankAcc.id);
+        if (!initialData) {
+          // Find default cash/bank accounts only for new entries
+          const cashAcc = accountsList.find((a: any) => a.type === "CASH");
+          const bankAcc = accountsList.find((a: any) => a.type === "BANK");
+          
+          if (cashAcc && bankAcc) {
+            form.setValue("fromAccountId", cashAcc.id);
+            form.setValue("toAccountId", bankAcc.id);
+          }
         }
       } catch (error) {
         toast.error("Failed to load accounts.");
       }
     }
     loadData();
-  }, []);
+  }, [initialData]);
 
   const form = useForm<ContraFormValues>({
     resolver: zodResolver(contraFormSchema),
     defaultValues: {
-      entryNo: `CON-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
-      date: new Date().toISOString().split('T')[0],
-      transferType: "CASH_TO_BANK",
-      fromAccountId: "",
-      toAccountId: "",
-      amount: "",
+      entryNo: initialData?.entryNo || `CON-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+      date: initialData?.date 
+        ? new Date(initialData.date).toISOString().split('T')[0] 
+        : new Date().toISOString().split('T')[0],
+      transferType: initialData?.transferType || "CASH_TO_BANK",
+      fromAccountId: initialData?.fromAccountId || "",
+      toAccountId: initialData?.toAccountId || "",
+      amount: initialData?.amount?.toString() || "",
+      reference: initialData?.reference || "",
+      narration: initialData?.narration || "",
     },
   });
 
@@ -89,11 +99,17 @@ export function ContraForm() {
   async function onSubmit(data: ContraFormValues) {
     try {
       setIsSubmitting(true);
-      await createContra(data);
-      toast.success("Contra entry saved!");
+      if (initialData?.id) {
+        await updateContra(initialData.id, data);
+        toast.success("Contra entry updated!");
+      } else {
+        await createContra(data);
+        toast.success("Contra entry saved!");
+      }
       router.push("/contra");
+      router.refresh();
     } catch (error) {
-      toast.error("Failed to save contra entry.");
+      toast.error(initialData?.id ? "Failed to update contra entry." : "Failed to save contra entry.");
     } finally {
       setIsSubmitting(false);
     }

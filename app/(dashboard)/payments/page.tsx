@@ -32,6 +32,7 @@ import { PaymentVoucher } from "@/components/payments/PaymentVoucher";
 import { exportToPDF } from "@/lib/export";
 import { toast } from "sonner";
 import { Printer } from "lucide-react";
+import { deletePayment } from "@/app/actions/payments";
 
 import {
   Select,
@@ -50,6 +51,8 @@ export default function PaymentsPage() {
 
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
 
   useEffect(() => {
@@ -80,10 +83,25 @@ export default function PaymentsPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!selectedPayment) return;
+    try {
+      setIsDeleting(true);
+      await deletePayment(selectedPayment.id);
+      setPayments(payments.filter(p => p.id !== selectedPayment.id));
+      toast.success("Payment deleted successfully");
+      setIsDeleteAlertOpen(false);
+    } catch (error) {
+      toast.error("Failed to delete payment");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const filteredPayments = payments.filter((payment) => {
     const matchesSearch = 
       payment.voucherNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.vendor?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      payment.narration?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesDate = !dateFilter || payment.date.startsWith(dateFilter);
     const matchesType = typeFilter === "all" || payment.type === typeFilter;
@@ -109,7 +127,7 @@ export default function PaymentsPage() {
         <div className="relative w-full max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search vendor or voucher no..."
+            placeholder="Search narration or voucher no..."
             className="pl-8"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -128,9 +146,22 @@ export default function PaymentsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="Salary">Salary</SelectItem>
-              <SelectItem value="Utilities">Utilities</SelectItem>
-              <SelectItem value="Rent">Rent</SelectItem>
+              <SelectItem value="Registration & Paper Works">Registration & Paper Works</SelectItem>
+              <SelectItem value="Printing Expenese">Printing Expenese</SelectItem>
+              <SelectItem value="Office Expenses">Office Expenses</SelectItem>
+              <SelectItem value="Office Rent Advance">Office Rent Advance</SelectItem>
+              <SelectItem value="Office Stationery">Office Stationery</SelectItem>
+              <SelectItem value="Legal Advisor">Legal Advisor</SelectItem>
+              <SelectItem value="Tea Expenses">Tea Expenses</SelectItem>
+              <SelectItem value="Office Equipments">Office Equipments</SelectItem>
+              <SelectItem value="Furniture">Furniture</SelectItem>
+              <SelectItem value="Islamic Book Purchased">Islamic Book Purchased</SelectItem>
+              <SelectItem value="Delivery Charges">Delivery Charges</SelectItem>
+              <SelectItem value="Bank Charges">Bank Charges</SelectItem>
+              <SelectItem value="Office Rent">Office Rent</SelectItem>
+              <SelectItem value="Electricity">Electricity</SelectItem>
+              <SelectItem value="Telephone & Internet Bills">Telephone & Internet Bills</SelectItem>
+              <SelectItem value="Events Expenses">Events Expenses</SelectItem>
             </SelectContent>
           </Select>
           {(searchTerm || dateFilter || typeFilter !== "all") && (
@@ -151,7 +182,6 @@ export default function PaymentsPage() {
             <TableRow>
               <TableHead>Voucher No.</TableHead>
               <TableHead>Date</TableHead>
-              <TableHead>Paid To (Vendor)</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Status</TableHead>
@@ -161,18 +191,17 @@ export default function PaymentsPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-10">Loading payments...</TableCell>
+                <TableCell colSpan={6} className="text-center py-10">Loading payments...</TableCell>
               </TableRow>
             ) : filteredPayments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No payments found matching the filters.</TableCell>
+                <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">No payments found matching the filters.</TableCell>
               </TableRow>
             ) : (
               filteredPayments.map((payment) => (
                 <TableRow key={payment.id}>
                   <TableCell className="font-medium text-amber-600">{payment.voucherNo}</TableCell>
                   <TableCell>{new Date(payment.date).toLocaleDateString()}</TableCell>
-                  <TableCell>{payment.vendor?.name || "Unknown"}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{payment.type}</Badge>
                   </TableCell>
@@ -196,10 +225,18 @@ export default function PaymentsPage() {
                         }}>
                           <Printer className="mr-2 h-4 w-4" /> Print Voucher
                         </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Edit className="mr-2 h-4 w-4" /> Edit
+                         <DropdownMenuItem asChild>
+                          <Link href={`/payments/${payment.id}/edit`}>
+                            <Edit className="mr-2 h-4 w-4" /> Edit
+                          </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
+                        <DropdownMenuItem 
+                          className="text-destructive"
+                          onClick={() => {
+                            setSelectedPayment(payment);
+                            setIsDeleteAlertOpen(true);
+                          }}
+                        >
                           <Trash className="mr-2 h-4 w-4" /> Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -231,6 +268,32 @@ export default function PaymentsPage() {
             >
               <Printer className="mr-2 h-4 w-4" />
               {isPrinting ? "Generating PDF..." : "Download PDF"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Are you absolutely sure?</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              This action cannot be undone. This will permanently delete the payment
+              {selectedPayment && <span className="font-bold"> {selectedPayment.voucherNo}</span>} and remove its data from our servers.
+            </p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsDeleteAlertOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleDelete}
+              variant="destructive"
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
