@@ -15,6 +15,7 @@ import { Plus, ArrowRightLeft, MoreVertical, Trash, Edit } from "lucide-react";
 import Link from "next/link";
 import { deleteContra } from "@/app/actions/contra";
 import { toast } from "sonner";
+import { format } from "date-fns";
 import { 
   Dialog, 
   DialogContent, 
@@ -105,7 +106,7 @@ export default function ContraPage() {
               entries.map((entry: any) => (
                 <TableRow key={entry.id}>
                   <TableCell className="font-medium text-indigo-600">{entry.entryNo}</TableCell>
-                  <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
+                  <TableCell>{format(new Date(entry.date), "dd/MM/yyyy")}</TableCell>
                   <TableCell>{entry.fromAccountId}</TableCell>
                   <TableCell>
                     <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />

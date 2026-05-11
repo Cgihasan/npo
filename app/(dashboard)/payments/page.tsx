@@ -33,6 +33,7 @@ import { exportToPDF } from "@/lib/export";
 import { toast } from "sonner";
 import { Printer } from "lucide-react";
 import { deletePayment } from "@/app/actions/payments";
+import { format } from "date-fns";
 
 import {
   Select,
@@ -201,7 +202,7 @@ export default function PaymentsPage() {
               filteredPayments.map((payment) => (
                 <TableRow key={payment.id}>
                   <TableCell className="font-medium text-amber-600">{payment.voucherNo}</TableCell>
-                  <TableCell>{new Date(payment.date).toLocaleDateString()}</TableCell>
+                  <TableCell>{format(new Date(payment.date), "dd/MM/yyyy")}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{payment.type}</Badge>
                   </TableCell>

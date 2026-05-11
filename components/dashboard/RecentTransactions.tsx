@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getTransactions } from "@/app/actions/reports";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { format } from "date-fns";
 
 export function RecentTransactions() {
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -66,7 +67,7 @@ export function RecentTransactions() {
             <div className="ml-4 space-y-1">
               <p className="text-sm font-medium leading-none">{safeName}</p>
               <p className="text-xs text-muted-foreground">
-                {isReceipt ? "Receipt" : isPayment ? "Payment" : "Contra"} • {new Date(tx.date).toLocaleDateString()}
+                {isReceipt ? "Receipt" : isPayment ? "Payment" : "Contra"} • {format(new Date(tx.date), "dd/MM/yyyy")}
               </p>
             </div>
             <div className={`ml-auto font-medium ${amountColor}`}>

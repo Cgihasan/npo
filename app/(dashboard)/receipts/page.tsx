@@ -39,6 +39,7 @@ import { ReceiptVoucher } from "@/components/receipts/ReceiptVoucher";
 import { exportToPDF } from "@/lib/export";
 import { toast } from "sonner";
 import { deleteReceipt } from "@/app/actions/receipts";
+import { format } from "date-fns";
 
 export default function ReceiptsPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -191,7 +192,7 @@ export default function ReceiptsPage() {
               filteredReceipts.map((receipt) => (
                 <TableRow key={receipt.id}>
                   <TableCell className="font-medium text-emerald-600">{receipt.receiptNo}</TableCell>
-                  <TableCell>{new Date(receipt.date).toLocaleDateString()}</TableCell>
+                  <TableCell>{format(new Date(receipt.date), "dd/MM/yyyy")}</TableCell>
                   <TableCell>{receipt.donor?.name || "Unknown"}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{receipt.type}</Badge>
