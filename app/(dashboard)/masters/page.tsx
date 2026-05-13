@@ -18,6 +18,7 @@ import { Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -176,12 +177,13 @@ export default function MastersPage() {
       </Tabs>
 
       <Dialog open={isDonorDialogOpen} onOpenChange={setIsDonorDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Donor</DialogTitle>
-          </DialogHeader>
-          <MasterForm 
-            type="donor" 
+<DialogContent>
+           <DialogHeader>
+             <DialogTitle>Add New Donor</DialogTitle>
+             <DialogDescription>Add a new donor to the system.</DialogDescription>
+           </DialogHeader>
+           <MasterForm
+             type="donor"
             onSuccess={() => { setIsDonorDialogOpen(false); loadData(); }} 
             onCancel={() => setIsDonorDialogOpen(false)}
             submitAction={createDonor}
@@ -190,12 +192,13 @@ export default function MastersPage() {
       </Dialog>
 
       <Dialog open={isVendorDialogOpen} onOpenChange={setIsVendorDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add New Vendor</DialogTitle>
-          </DialogHeader>
-          <MasterForm 
-            type="vendor" 
+<DialogContent>
+           <DialogHeader>
+             <DialogTitle>Add New Vendor</DialogTitle>
+             <DialogDescription>Add a new vendor to the system.</DialogDescription>
+           </DialogHeader>
+           <MasterForm
+             type="vendor"
             onSuccess={() => { setIsVendorDialogOpen(false); loadData(); }} 
             onCancel={() => setIsVendorDialogOpen(false)}
             submitAction={createVendor}

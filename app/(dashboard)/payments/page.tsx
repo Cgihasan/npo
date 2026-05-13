@@ -22,11 +22,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogFooter 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter
 } from "@/components/ui/dialog";
 import { PaymentVoucher } from "@/components/payments/PaymentVoucher";
 import { exportToPDF } from "@/lib/export";
@@ -252,9 +253,10 @@ export default function PaymentsPage() {
 
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Payment Voucher Preview</DialogTitle>
-          </DialogHeader>
+<DialogHeader>
+             <DialogTitle>Payment Voucher Preview</DialogTitle>
+             <DialogDescription>Preview of payment voucher details.</DialogDescription>
+           </DialogHeader>
           <div className="flex justify-center p-4 bg-muted/30 rounded-lg overflow-x-auto">
             {selectedPayment && <PaymentVoucher payment={selectedPayment} />}
           </div>
@@ -276,15 +278,19 @@ export default function PaymentsPage() {
 
       <Dialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Are you absolutely sure?</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-muted-foreground">
-              This action cannot be undone. This will permanently delete the payment
-              {selectedPayment && <span className="font-bold"> {selectedPayment.voucherNo}</span>} and remove its data from our servers.
-            </p>
-          </div>
+<DialogHeader>
+             <DialogTitle>Are you absolutely sure?</DialogTitle>
+             <DialogDescription>
+               This action cannot be undone. This will permanently delete the payment
+               {selectedPayment && <span className="font-bold"> {selectedPayment.voucherNo}</span>} and remove its data from our servers.
+             </DialogDescription>
+           </DialogHeader>
+           <div className="py-4">
+             <p className="text-sm text-muted-foreground">
+               This action cannot be undone. This will permanently delete the payment
+               {selectedPayment && <span className="font-bold"> {selectedPayment.voucherNo}</span>} and remove its data from our servers.
+             </p>
+           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setIsDeleteAlertOpen(false)}>
               Cancel

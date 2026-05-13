@@ -19,6 +19,7 @@ import { format } from "date-fns";
 import { 
   Dialog, 
   DialogContent, 
+  DialogDescription,
   DialogHeader, 
   DialogTitle, 
   DialogFooter 
@@ -149,13 +150,11 @@ export default function ContraPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Are you absolutely sure?</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-muted-foreground">
+            <DialogDescription>
               This action cannot be undone. This will permanently delete the contra entry
               {selectedEntry && <span className="font-bold"> {selectedEntry.entryNo}</span>} and remove its data from our servers.
-            </p>
-          </div>
+            </DialogDescription>
+          </DialogHeader>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setIsDeleteAlertOpen(false)}>
               Cancel
