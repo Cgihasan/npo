@@ -44,3 +44,15 @@ export async function createVendor(data: { name: string; email?: string; phone?:
   if (!session) throw new Error("Unauthorized");
   return await db.vendor.create({ data });
 }
+
+export async function createAccount(data: { name: string; type: string; balance?: number }) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+  return await db.account.create({ 
+    data: {
+      name: data.name,
+      type: data.type,
+      balance: data.balance || 0,
+    }
+  });
+}

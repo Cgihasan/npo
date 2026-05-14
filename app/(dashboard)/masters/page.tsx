@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getDonors, getVendors, getAccounts, createDonor, createVendor } from "@/app/actions/masters";
+import { getDonors, getVendors, getAccounts, createDonor, createVendor, createAccount } from "@/app/actions/masters";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Table, 
@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { MasterForm } from "@/components/forms/MasterForm";
+import { AccountForm } from "@/components/forms/AccountForm";
 
 export default function MastersPage() {
   const [donors, setDonors] = useState<any[]>([]);
@@ -31,6 +32,7 @@ export default function MastersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDonorDialogOpen, setIsDonorDialogOpen] = useState(false);
   const [isVendorDialogOpen, setIsVendorDialogOpen] = useState(false);
+  const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -142,9 +144,14 @@ export default function MastersPage() {
 
         <TabsContent value="accounts">
           <Card>
-            <CardHeader>
-              <CardTitle>Account Heads</CardTitle>
-              <CardDescription>Chart of accounts for bookkeeping.</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Account Heads</CardTitle>
+                <CardDescription>Chart of accounts for bookkeeping.</CardDescription>
+              </div>
+              <Button onClick={() => setIsAccountDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Plus className="mr-2 h-4 w-4" /> Add Account
+              </Button>
             </CardHeader>
             <CardContent>
               <Table>
@@ -202,6 +209,20 @@ export default function MastersPage() {
             onSuccess={() => { setIsVendorDialogOpen(false); loadData(); }} 
             onCancel={() => setIsVendorDialogOpen(false)}
             submitAction={createVendor}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAccountDialogOpen} onOpenChange={setIsAccountDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Account</DialogTitle>
+            <DialogDescription>Add a new account head to the chart of accounts.</DialogDescription>
+          </DialogHeader>
+          <AccountForm
+            onSuccess={() => { setIsAccountDialogOpen(false); loadData(); }} 
+            onCancel={() => setIsAccountDialogOpen(false)}
+            submitAction={createAccount}
           />
         </DialogContent>
       </Dialog>
