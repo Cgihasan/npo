@@ -178,6 +178,30 @@ export async function deleteReceipt(id: string) {
   return { success: true };
 }
 
+export async function deleteReceipts(ids: string[]) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+
+  await db.$transaction(async (tx) => {
+    // Delete associated transactions first
+    await tx.transaction.deleteMany({
+      where: {
+        refId: { in: ids },
+        refType: "RECEIPT",
+      },
+    });
+
+    // Delete the receipts
+    await tx.receipt.deleteMany({
+      where: { id: { in: ids } },
+    });
+  });
+
+  revalidatePath("/receipts");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
 export async function getReceiptById(id: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");

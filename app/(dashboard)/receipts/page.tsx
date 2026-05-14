@@ -39,8 +39,9 @@ import {
 import { ReceiptVoucher } from "@/components/receipts/ReceiptVoucher";
 import { exportToPDF } from "@/lib/export";
 import { toast } from "sonner";
-import { deleteReceipt } from "@/app/actions/receipts";
+import { deleteReceipt, deleteReceipts } from "@/app/actions/receipts";
 import { format } from "date-fns";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function ReceiptsPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -54,6 +55,10 @@ export default function ReceiptsPage() {
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
+
+  const [selectedReceipts, setSelectedReceipts] = useState<string[]>([]);
+  const [isBulkDeleteAlertOpen, setIsBulkDeleteAlertOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   useEffect(() => {
     async function loadReceipts() {
@@ -98,6 +103,22 @@ export default function ReceiptsPage() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedReceipts.length === 0) return;
+    try {
+      setIsBulkDeleting(true);
+      await deleteReceipts(selectedReceipts);
+      setReceipts(receipts.filter(r => !selectedReceipts.includes(r.id)));
+      setSelectedReceipts([]);
+      toast.success("Receipts deleted successfully");
+      setIsBulkDeleteAlertOpen(false);
+    } catch (error) {
+      toast.error("Failed to delete receipts");
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   const filteredReceipts = receipts.filter((receipt) => {
     const matchesSearch = 
       receipt.receiptNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -116,11 +137,21 @@ export default function ReceiptsPage() {
           <h2 className="text-3xl font-bold tracking-tight">Receipts</h2>
           <p className="text-muted-foreground">Manage and track all income receipts.</p>
         </div>
-        <Button asChild className="bg-emerald-600 hover:bg-emerald-700">
-          <Link href="/receipts/new">
-            <Plus className="mr-2 h-4 w-4" /> New Receipt
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          {selectedReceipts.length > 0 && (
+            <Button 
+              variant="destructive" 
+              onClick={() => setIsBulkDeleteAlertOpen(true)}
+            >
+              <Trash className="mr-2 h-4 w-4" /> Delete Selected ({selectedReceipts.length})
+            </Button>
+          )}
+          <Button asChild className="bg-emerald-600 hover:bg-emerald-700">
+            <Link href="/receipts/new">
+              <Plus className="mr-2 h-4 w-4" /> New Receipt
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col md:flex-row items-center gap-4">
@@ -171,6 +202,18 @@ export default function ReceiptsPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">
+                <Checkbox 
+                  checked={filteredReceipts.length > 0 && selectedReceipts.length === filteredReceipts.length}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedReceipts(filteredReceipts.map(r => r.id));
+                    } else {
+                      setSelectedReceipts([]);
+                    }
+                  }}
+                />
+              </TableHead>
               <TableHead>Receipt No.</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Donor</TableHead>
@@ -183,15 +226,27 @@ export default function ReceiptsPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-10">Loading receipts...</TableCell>
+                <TableCell colSpan={8} className="text-center py-10">Loading receipts...</TableCell>
               </TableRow>
             ) : filteredReceipts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No receipts found matching the filters.</TableCell>
+                <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">No receipts found matching the filters.</TableCell>
               </TableRow>
             ) : (
               filteredReceipts.map((receipt) => (
                 <TableRow key={receipt.id}>
+                  <TableCell>
+                    <Checkbox 
+                      checked={selectedReceipts.includes(receipt.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedReceipts([...selectedReceipts, receipt.id]);
+                        } else {
+                          setSelectedReceipts(selectedReceipts.filter(id => id !== receipt.id));
+                        }
+                      }}
+                    />
+                  </TableCell>
                   <TableCell className="font-medium text-emerald-600">{receipt.receiptNo}</TableCell>
                   <TableCell>{format(new Date(receipt.date), "dd/MM/yyyy")}</TableCell>
                   <TableCell>{receipt.donor?.name || "Unknown"}</TableCell>
@@ -294,6 +349,34 @@ export default function ReceiptsPage() {
               disabled={isDeleting}
             >
               {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isBulkDeleteAlertOpen} onOpenChange={setIsBulkDeleteAlertOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Are you absolutely sure?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete {selectedReceipts.length} selected receipts and remove their data from our servers.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              This action cannot be undone. This will permanently delete {selectedReceipts.length} selected receipts and remove their data from our servers.
+            </p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsBulkDeleteAlertOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleBulkDelete}
+              variant="destructive"
+              disabled={isBulkDeleting}
+            >
+              {isBulkDeleting ? "Deleting..." : "Delete All"}
             </Button>
           </DialogFooter>
         </DialogContent>
