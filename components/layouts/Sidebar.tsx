@@ -11,6 +11,7 @@ const navItems = [
   { href: '/receipts', label: 'Receipts', icon: Receipt },
   { href: '/payments', label: 'Payments', icon: Wallet },
   { href: '/contra', label: 'Contra', icon: Banknote },
+  { href: '/journal', label: 'Journal', icon: FileText },
   { href: '/accounts', label: 'Accounts', icon: BarChart2 },
   { href: '/reports', label: 'Reports', icon: FileText },
   { href: '/masters', label: 'Masters', icon: Users },

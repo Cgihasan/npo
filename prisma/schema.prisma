@@ -103,3 +103,12 @@ model Transaction {
   createdAt DateTime @default(now())
   account   Account  @relation(fields: [accountId], references: [id])
 }
+
+model JournalVoucher {
+  id          String   @id @default(cuid())
+  voucherNo   String   @unique
+  date        DateTime
+  narration   String?
+  attachment  String?
+  createdAt   DateTime @default(now())
+}

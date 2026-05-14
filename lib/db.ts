@@ -7,13 +7,13 @@ const prismaClientSingleton = () => {
 };
 
 declare global {
-  var prisma: undefined | ReturnType<typeof prismaClientSingleton>;
+  var prisma2: undefined | ReturnType<typeof prismaClientSingleton>;
 }
 
-const db = globalThis.prisma ?? prismaClientSingleton();
+const db = globalThis.prisma2 ?? prismaClientSingleton();
 
 export default db;
 
-if (process.env.NODE_ENV !== "production") globalThis.prisma = db;
+if (process.env.NODE_ENV !== "production") globalThis.prisma2 = db;
 
 // Triggering reload for new schema fields
