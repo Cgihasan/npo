@@ -7,15 +7,38 @@ export async function getTransactions() {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
   
-  const [receipts, payments, contra] = await Promise.all([
-    db.receipt.findMany({ include: { donor: true }, orderBy: { date: "desc" }, take: 10 }),
-    db.payment.findMany({ orderBy: { date: "desc" }, take: 10 }),
-    db.contraEntry.findMany({ orderBy: { date: "desc" }, take: 10 })
+  const transactions = await db.transaction.findMany({
+    include: {
+      account: true
+    },
+    orderBy: {
+      date: "desc"
+    },
+    take: 100
+  });
+
+  const receiptIds = transactions.filter(t => t.refType === "RECEIPT").map(t => t.refId);
+  const paymentIds = transactions.filter(t => t.refType === "PAYMENT").map(t => t.refId);
+  const contraIds = transactions.filter(t => t.refType === "CONTRA").map(t => t.refId);
+  const journalIds = transactions.filter(t => t.refType === "JOURNAL").map(t => t.refId);
+
+  const [receipts, payments, contras, journals] = await Promise.all([
+    receiptIds.length ? db.receipt.findMany({ where: { id: { in: receiptIds } }, select: { id: true, narration: true } }) : Promise.resolve([]),
+    paymentIds.length ? db.payment.findMany({ where: { id: { in: paymentIds } }, select: { id: true, narration: true } }) : Promise.resolve([]),
+    contraIds.length ? db.contraEntry.findMany({ where: { id: { in: contraIds } }, select: { id: true, narration: true } }) : Promise.resolve([]),
+    journalIds.length ? db.journalVoucher.findMany({ where: { id: { in: journalIds } }, select: { id: true, narration: true } }) : Promise.resolve([])
   ]);
 
-  return [...receipts, ...payments, ...contra].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  ).slice(0, 20);
+  const narrationMap = new Map();
+  receipts.forEach(r => narrationMap.set(r.id, r.narration));
+  payments.forEach(p => narrationMap.set(p.id, p.narration));
+  contras.forEach(c => narrationMap.set(c.id, c.narration));
+  journals.forEach(j => narrationMap.set(j.id, j.narration));
+
+  return transactions.map(tx => ({
+    ...tx,
+    narration: narrationMap.get(tx.refId) || "-"
+  }));
 }
 
 export async function getAccountBalances() {

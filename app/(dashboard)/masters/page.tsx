@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getDonors, getVendors, getAccounts, createDonor, createVendor, createAccount } from "@/app/actions/masters";
+import { 
+  getDonors, getVendors, getAccounts, 
+  createDonor, createVendor, createAccount,
+  updateDonor, updateVendor, updateAccount,
+  deleteDonor, deleteVendor, deleteAccount
+} from "@/app/actions/masters";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Table, 
@@ -14,7 +19,14 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, MoreVertical, Edit, Trash } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +45,11 @@ export default function MastersPage() {
   const [isDonorDialogOpen, setIsDonorDialogOpen] = useState(false);
   const [isVendorDialogOpen, setIsVendorDialogOpen] = useState(false);
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
+
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; type: "donor" | "vendor" | "account" } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -56,6 +73,37 @@ export default function MastersPage() {
     loadData();
   }, []);
 
+  const handleDelete = async () => {
+    if (!itemToDelete) return;
+    setIsDeleting(true);
+    try {
+      if (itemToDelete.type === "donor") await deleteDonor(itemToDelete.id);
+      if (itemToDelete.type === "vendor") await deleteVendor(itemToDelete.id);
+      if (itemToDelete.type === "account") await deleteAccount(itemToDelete.id);
+      toast.success(`${itemToDelete.type} deleted successfully`);
+      setIsDeleteDialogOpen(false);
+      loadData();
+    } catch (error: any) {
+      toast.error(error.message || `Failed to delete ${itemToDelete.type}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const openEditDialog = (item: any, type: "donor" | "vendor" | "account") => {
+    setEditingItem(item);
+    if (type === "donor") setIsDonorDialogOpen(true);
+    if (type === "vendor") setIsVendorDialogOpen(true);
+    if (type === "account") setIsAccountDialogOpen(true);
+  };
+
+  const closeDialogs = () => {
+    setIsDonorDialogOpen(false);
+    setIsVendorDialogOpen(false);
+    setIsAccountDialogOpen(false);
+    setEditingItem(null);
+  };
+
   return (
     <div className="space-y-6 p-4 md:p-8">
       <div>
@@ -77,7 +125,7 @@ export default function MastersPage() {
                 <CardTitle>Donors</CardTitle>
                 <CardDescription>Individuals and organizations that contribute to your NPO.</CardDescription>
               </div>
-              <Button onClick={() => setIsDonorDialogOpen(true)} className="bg-emerald-600 hover:bg-emerald-700">
+              <Button onClick={() => { setEditingItem(null); setIsDonorDialogOpen(true); }} className="bg-emerald-600 hover:bg-emerald-700">
                 <Plus className="mr-2 h-4 w-4" /> Add Donor
               </Button>
             </CardHeader>
@@ -88,16 +136,40 @@ export default function MastersPage() {
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Phone</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    <TableRow><TableCell colSpan={3} className="text-center">Loading...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={4} className="text-center">Loading...</TableCell></TableRow>
                   ) : donors.map((donor) => (
                     <TableRow key={donor.id}>
                       <TableCell className="font-medium">{donor.name}</TableCell>
                       <TableCell>{donor.email}</TableCell>
                       <TableCell>{donor.phone}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEditDialog(donor, "donor")}>
+                              <Edit className="mr-2 h-4 w-4" /> Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => {
+                                setItemToDelete({ id: donor.id, type: "donor" });
+                                setIsDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash className="mr-2 h-4 w-4" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -113,7 +185,7 @@ export default function MastersPage() {
                 <CardTitle>Vendors</CardTitle>
                 <CardDescription>Suppliers and service providers.</CardDescription>
               </div>
-              <Button onClick={() => setIsVendorDialogOpen(true)} className="bg-amber-600 hover:bg-amber-700 text-white">
+              <Button onClick={() => { setEditingItem(null); setIsVendorDialogOpen(true); }} className="bg-amber-600 hover:bg-amber-700 text-white">
                 <Plus className="mr-2 h-4 w-4" /> Add Vendor
               </Button>
             </CardHeader>
@@ -124,16 +196,40 @@ export default function MastersPage() {
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Phone</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    <TableRow><TableCell colSpan={3} className="text-center">Loading...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={4} className="text-center">Loading...</TableCell></TableRow>
                   ) : vendors.map((vendor) => (
                     <TableRow key={vendor.id}>
                       <TableCell className="font-medium">{vendor.name}</TableCell>
                       <TableCell>{vendor.email}</TableCell>
                       <TableCell>{vendor.phone}</TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEditDialog(vendor, "vendor")}>
+                              <Edit className="mr-2 h-4 w-4" /> Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => {
+                                setItemToDelete({ id: vendor.id, type: "vendor" });
+                                setIsDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash className="mr-2 h-4 w-4" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -149,7 +245,7 @@ export default function MastersPage() {
                 <CardTitle>Account Heads</CardTitle>
                 <CardDescription>Chart of accounts for bookkeeping.</CardDescription>
               </div>
-              <Button onClick={() => setIsAccountDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button onClick={() => { setEditingItem(null); setIsAccountDialogOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white">
                 <Plus className="mr-2 h-4 w-4" /> Add Account
               </Button>
             </CardHeader>
@@ -160,11 +256,12 @@ export default function MastersPage() {
                     <TableHead>Name</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead className="text-right">Balance</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    <TableRow><TableCell colSpan={3} className="text-center">Loading...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={4} className="text-center">Loading...</TableCell></TableRow>
                   ) : accounts.map((acc) => (
                     <TableRow key={acc.id}>
                       <TableCell className="font-medium">{acc.name}</TableCell>
@@ -173,6 +270,29 @@ export default function MastersPage() {
                       </TableCell>
                       <TableCell className="text-right font-bold">
                         ₹{Number(acc.balance).toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEditDialog(acc, "account")}>
+                              <Edit className="mr-2 h-4 w-4" /> Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => {
+                                setItemToDelete({ id: acc.id, type: "account" });
+                                setIsDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash className="mr-2 h-4 w-4" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -184,31 +304,33 @@ export default function MastersPage() {
       </Tabs>
 
       <Dialog open={isDonorDialogOpen} onOpenChange={setIsDonorDialogOpen}>
-<DialogContent>
-           <DialogHeader>
-             <DialogTitle>Add New Donor</DialogTitle>
-             <DialogDescription>Add a new donor to the system.</DialogDescription>
-           </DialogHeader>
-           <MasterForm
-             type="donor"
-            onSuccess={() => { setIsDonorDialogOpen(false); loadData(); }} 
-            onCancel={() => setIsDonorDialogOpen(false)}
-            submitAction={createDonor}
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingItem ? "Edit Donor" : "Add New Donor"}</DialogTitle>
+            <DialogDescription>{editingItem ? "Update donor details." : "Add a new donor to the system."}</DialogDescription>
+          </DialogHeader>
+          <MasterForm
+            type="donor"
+            initialData={editingItem}
+            onSuccess={() => { closeDialogs(); loadData(); }} 
+            onCancel={closeDialogs}
+            submitAction={editingItem ? updateDonor : createDonor}
           />
         </DialogContent>
       </Dialog>
 
       <Dialog open={isVendorDialogOpen} onOpenChange={setIsVendorDialogOpen}>
-<DialogContent>
-           <DialogHeader>
-             <DialogTitle>Add New Vendor</DialogTitle>
-             <DialogDescription>Add a new vendor to the system.</DialogDescription>
-           </DialogHeader>
-           <MasterForm
-             type="vendor"
-            onSuccess={() => { setIsVendorDialogOpen(false); loadData(); }} 
-            onCancel={() => setIsVendorDialogOpen(false)}
-            submitAction={createVendor}
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingItem ? "Edit Vendor" : "Add New Vendor"}</DialogTitle>
+            <DialogDescription>{editingItem ? "Update vendor details." : "Add a new vendor to the system."}</DialogDescription>
+          </DialogHeader>
+          <MasterForm
+            type="vendor"
+            initialData={editingItem}
+            onSuccess={() => { closeDialogs(); loadData(); }} 
+            onCancel={closeDialogs}
+            submitAction={editingItem ? updateVendor : createVendor}
           />
         </DialogContent>
       </Dialog>
@@ -216,14 +338,32 @@ export default function MastersPage() {
       <Dialog open={isAccountDialogOpen} onOpenChange={setIsAccountDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add New Account</DialogTitle>
-            <DialogDescription>Add a new account head to the chart of accounts.</DialogDescription>
+            <DialogTitle>{editingItem ? "Edit Account" : "Add New Account"}</DialogTitle>
+            <DialogDescription>{editingItem ? "Update account details." : "Add a new account head to the chart of accounts."}</DialogDescription>
           </DialogHeader>
           <AccountForm
-            onSuccess={() => { setIsAccountDialogOpen(false); loadData(); }} 
-            onCancel={() => setIsAccountDialogOpen(false)}
-            submitAction={createAccount}
+            initialData={editingItem}
+            onSuccess={() => { closeDialogs(); loadData(); }} 
+            onCancel={closeDialogs}
+            submitAction={editingItem ? updateAccount : createAccount}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Are you absolutely sure?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete the {itemToDelete?.type} and may fail if it is currently being used in any transactions or vouchers.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

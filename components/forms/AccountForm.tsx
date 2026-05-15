@@ -14,15 +14,16 @@ import {
 import { toast } from "sonner";
 
 interface AccountFormProps {
+  initialData?: any;
   onSuccess: () => void;
   onCancel: () => void;
-  submitAction: (data: any) => Promise<any>;
+  submitAction: (dataOrId: any, data?: any) => Promise<any>;
 }
 
-export function AccountForm({ onSuccess, onCancel, submitAction }: AccountFormProps) {
-  const [name, setName] = useState("");
-  const [type, setType] = useState("");
-  const [balance, setBalance] = useState("");
+export function AccountForm({ initialData, onSuccess, onCancel, submitAction }: AccountFormProps) {
+  const [name, setName] = useState(initialData?.name || "");
+  const [type, setType] = useState(initialData?.type || "");
+  const [balance, setBalance] = useState(initialData?.balance !== undefined ? String(initialData.balance) : "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,15 +35,22 @@ export function AccountForm({ onSuccess, onCancel, submitAction }: AccountFormPr
 
     setIsSubmitting(true);
     try {
-      await submitAction({ 
+      const payload = { 
         name, 
         type, 
         balance: balance ? Number(balance) : 0 
-      });
-      toast.success("Account created successfully!");
+      };
+
+      if (initialData?.id) {
+        await submitAction(initialData.id, payload);
+        toast.success("Account updated successfully!");
+      } else {
+        await submitAction(payload);
+        toast.success("Account created successfully!");
+      }
       onSuccess();
-    } catch (error) {
-      toast.error("Failed to create account.");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save account.");
     } finally {
       setIsSubmitting(false);
     }
@@ -93,7 +101,7 @@ export function AccountForm({ onSuccess, onCancel, submitAction }: AccountFormPr
       <div className="flex justify-end gap-2 pt-4">
         <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
         <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white">
-          {isSubmitting ? "Creating..." : "Create Account"}
+          {isSubmitting ? "Saving..." : initialData ? "Update Account" : "Create Account"}
         </Button>
       </div>
     </form>

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { format } from "date-fns";
 
 export default function ReportsPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -52,7 +53,7 @@ export default function ReportsPage() {
                   <TableHead>Type</TableHead>
                   <TableHead>Debit (In)</TableHead>
                   <TableHead>Credit (Out)</TableHead>
-                  <TableHead>Reference</TableHead>
+                  <TableHead>Narration</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -67,7 +68,7 @@ export default function ReportsPage() {
                 ) : (
                   transactions.map((tx) => (
                     <TableRow key={tx.id}>
-                      <TableCell>{new Date(tx.date).toLocaleDateString()}</TableCell>
+                      <TableCell>{format(new Date(tx.date), "dd/MM/yyyy")}</TableCell>
                       <TableCell className="font-medium">{tx.account?.name}</TableCell>
                       <TableCell>
                         <Badge variant="outline">{tx.refType}</Badge>
@@ -78,8 +79,8 @@ export default function ReportsPage() {
                       <TableCell className="text-amber-600 font-medium">
                         {tx.credit > 0 ? `₹${Number(tx.credit).toLocaleString()}` : "-"}
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground font-mono">
-                        {tx.refId}
+                      <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate" title={tx.narration}>
+                        {tx.narration}
                       </TableCell>
                     </TableRow>
                   ))
