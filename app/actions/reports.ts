@@ -149,3 +149,93 @@ export async function getDashboardStats() {
     bankBalance,
   };
 }
+
+export interface ReceiptPaymentFilter {
+  startDate?: string;
+  endDate?: string;
+  type?: "RECEIPT" | "PAYMENT" | "ALL";
+}
+
+export async function getReceiptPaymentReport(filters: ReceiptPaymentFilter = {}) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+
+  const { startDate, endDate, type } = filters;
+
+  const whereClause: any = {};
+
+  if (startDate && endDate) {
+    whereClause.date = {
+      gte: new Date(startDate),
+      lte: new Date(endDate),
+    };
+  } else if (startDate) {
+    whereClause.date = {
+      gte: new Date(startDate),
+    };
+  } else if (endDate) {
+    whereClause.date = {
+      lte: new Date(endDate),
+    };
+  }
+
+  const [receipts, payments] = await Promise.all([
+    type === "PAYMENT" ? Promise.resolve([]) : db.receipt.findMany({
+      where: whereClause,
+      include: {
+        donor: true,
+      },
+      orderBy: {
+        date: "desc",
+      },
+    }),
+    type === "RECEIPT" ? Promise.resolve([]) : db.payment.findMany({
+      where: whereClause,
+      orderBy: {
+        date: "desc",
+      },
+    }),
+  ]);
+
+  const receiptData = receipts.map((r) => ({
+    id: r.id,
+    date: r.date,
+    voucherNo: r.receiptNo,
+    type: "RECEIPT",
+    partyName: r.donor?.name || "-",
+    category: r.category || r.type,
+    amount: r.amount,
+    paymentMode: r.paymentMode,
+    narration: r.narration || "-",
+    status: "COMPLETED",
+  }));
+
+  const paymentData = payments.map((p) => ({
+    id: p.id,
+    date: p.date,
+    voucherNo: p.voucherNo,
+    type: "PAYMENT",
+    partyName: "-",
+    category: p.category || p.type,
+    amount: p.amount,
+    paymentMode: p.paymentMode,
+    narration: p.narration || "-",
+    status: p.status,
+  }));
+
+  const combinedData = [...receiptData, ...paymentData].sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+
+  const totalReceipts = receipts.reduce((sum, r) => sum + r.amount, 0);
+  const totalPayments = payments.reduce((sum, p) => sum + p.amount, 0);
+
+  return {
+    data: combinedData,
+    summary: {
+      totalReceipts,
+      totalPayments,
+      netBalance: totalReceipts - totalPayments,
+    },
+  };
+}
