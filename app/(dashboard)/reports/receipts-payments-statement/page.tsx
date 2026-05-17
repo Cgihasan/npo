@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { PeriodDatePicker } from "@/components/shared/PeriodDatePicker";
+import { CalendarDatePicker } from "@/components/shared/CalendarDatePicker";
 
 interface StatementDetail {
   name: string;
@@ -112,8 +112,8 @@ export default function ReceiptsPaymentsStatementPage() {
         </div>
         <div className="flex flex-col gap-3 min-w-0">
           <div className="flex flex-wrap items-end gap-4">
-            <PeriodDatePicker label="From" value={fromDate} onChange={setFromDate} />
-            <PeriodDatePicker label="To" value={toDate} onChange={setToDate} />
+            <CalendarDatePicker label="From" value={fromDate} onChange={setFromDate} />
+            <CalendarDatePicker label="To" value={toDate} onChange={setToDate} />
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs text-muted-foreground shrink-0">Quick year:</span>

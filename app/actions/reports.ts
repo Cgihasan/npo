@@ -287,29 +287,86 @@ export async function getReceiptPaymentStatement(startDate: string, endDate: str
   const totalDirectIncomes = directIncomes.reduce((sum, item) => sum + item.value, 0);
 
   // 3. Payments from Payments table grouped by category
+  // Use Account table as the authoritative source for category mapping,
+  // with keyword-based fallback for resilience
+  const allAccounts = await db.account.findMany({
+    where: { type: { in: ["EXPENSE", "ASSET"] } },
+    select: { accountType: true, category: true },
+  });
+  const accountCategoryMap = new Map<string, string | null>();
+  allAccounts.forEach(a => {
+    if (a.accountType) {
+      accountCategoryMap.set(a.accountType, a.category);
+      accountCategoryMap.set(a.accountType.toLowerCase(), a.category);
+    }
+  });
+
+  function resolveCategoryFallback(accountType: string): string {
+    const lower = accountType.toLowerCase();
+    if (/\b(asset|furniture|equipment)\b/.test(lower)) return "Fixed Assets";
+    if (/\b(deposit|advance)\b/.test(lower)) return "Deposits (Assets)";
+    return "Indirect Expenses";
+  }
+
   const payments = await db.payment.findMany({
     where: { date: { gte: start, lte: end } },
     select: { amount: true, category: true, accountType: true },
+  });
+
+  // Also fetch Journal Voucher transactions that debit expense accounts
+  const journalExpenseTx = await db.transaction.findMany({
+    where: {
+      refType: "JOURNAL",
+      date: { gte: start, lte: end },
+      debit: { gt: 0 },
+      account: { type: { in: ["EXPENSE", "ASSET"] } },
+    },
+    select: {
+      debit: true,
+      account: { select: { accountType: true, category: true } },
+    },
   });
 
   const fixedAssetsMap = new Map<string, number>();
   const currentAssetsMap = new Map<string, number>();
   const indirectExpensesMap = new Map<string, number>();
 
-  payments.forEach(p => {
-    if (p.category === "Fixed Assets") {
-      const label = p.accountType || p.category;
+  function addToPaymentMap(
+    accountType: string | null,
+    category: string | null,
+    amount: number
+  ) {
+    const resolvedCategory = accountType
+      ? (accountCategoryMap.get(accountType) ??
+         accountCategoryMap.get(accountType.toLowerCase()) ??
+         resolveCategoryFallback(accountType))
+      : (category ?? "Indirect Expenses");
+
+    if (resolvedCategory === "Fixed Assets") {
+      const label = accountType || category || "Fixed Assets";
       const current = fixedAssetsMap.get(label) || 0;
-      fixedAssetsMap.set(label, current + p.amount);
-    } else if (p.category === "Deposits (Assets)") {
-      const label = p.accountType || p.category;
+      fixedAssetsMap.set(label, current + amount);
+    } else if (resolvedCategory === "Deposits (Assets)") {
+      const label = accountType || category || "Deposits (Assets)";
       const current = currentAssetsMap.get(label) || 0;
-      currentAssetsMap.set(label, current + p.amount);
+      currentAssetsMap.set(label, current + amount);
     } else {
-      const label = p.accountType || p.category || "Other Expenses";
+      const label = accountType || category || "Other Expenses";
       const current = indirectExpensesMap.get(label) || 0;
-      indirectExpensesMap.set(label, current + p.amount);
+      indirectExpensesMap.set(label, current + amount);
     }
+  }
+
+  payments.forEach(p => {
+    addToPaymentMap(p.accountType, p.category, p.amount);
+  });
+
+  journalExpenseTx.forEach(tx => {
+    addToPaymentMap(
+      tx.account.accountType ?? null,
+      tx.account.category ?? null,
+      tx.debit
+    );
   });
 
   const fixedAssets = Array.from(fixedAssetsMap.entries()).map(([name, amount]) => ({ name, value: amount }));
