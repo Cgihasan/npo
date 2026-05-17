@@ -189,7 +189,7 @@ export default function JournalPage() {
                   <TableBody>
                     {selectedVoucher.transactions?.map((t: any) => (
                       <TableRow key={t.id}>
-                        <TableCell className="font-medium">{t.account?.name}</TableCell>
+                        <TableCell className="font-medium">{t.account?.accountType || t.account?.type || "-"}</TableCell>
                         <TableCell className="text-right">{t.debit > 0 ? `₹${t.debit.toLocaleString()}` : "-"}</TableCell>
                         <TableCell className="text-right">{t.credit > 0 ? `₹${t.credit.toLocaleString()}` : "-"}</TableCell>
                       </TableRow>

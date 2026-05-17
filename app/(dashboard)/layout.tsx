@@ -15,7 +15,7 @@ export default async function DashboardLayout({
     redirect("/login");
   }
   return (
-    <div className="flex h-screen bg-background text-foreground">
+    <div className="flex h-screen bg-background text-foreground" suppressHydrationWarning>
       <Sidebar />
       <div className="flex flex-col flex-1">
         <Navbar user={session.user} />

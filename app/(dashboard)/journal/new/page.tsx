@@ -179,7 +179,9 @@ export default function NewJournalPage() {
                       <SelectContent>
                         {accounts.map((acc) => (
                           <SelectItem key={acc.id} value={acc.id}>
-                            {acc.name}
+                            {acc.type === "CASH" || acc.type === "BANK"
+                              ? (acc.accountType || acc.type)
+                              : [acc.type, acc.category, acc.accountType].filter(Boolean).join(" - ")}
                           </SelectItem>
                         ))}
                       </SelectContent>

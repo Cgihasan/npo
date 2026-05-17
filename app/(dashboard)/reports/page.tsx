@@ -69,7 +69,7 @@ export default function ReportsPage() {
                   transactions.map((tx) => (
                     <TableRow key={tx.id}>
                       <TableCell>{format(new Date(tx.date), "dd/MM/yyyy")}</TableCell>
-                      <TableCell className="font-medium">{tx.account?.name}</TableCell>
+                      <TableCell className="font-medium">{tx.account?.accountType || tx.account?.type || "-"}</TableCell>
                       <TableCell>
                         <Badge variant="outline">{tx.refType}</Badge>
                       </TableCell>

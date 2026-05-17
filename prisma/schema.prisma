@@ -36,8 +36,9 @@ model Vendor {
 
 model Account {
   id           String        @id @default(cuid())
-  name         String
   type         String
+  category     String?
+  accountType  String?
   balance      Float         @default(0)
   transactions Transaction[]
 }

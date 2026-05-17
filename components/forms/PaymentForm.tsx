@@ -297,7 +297,7 @@ export function PaymentForm({ initialData }: PaymentFormProps) {
                       </FormControl>
                       <SelectContent>
                         {accounts.map((acc) => (
-                          <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                          <SelectItem key={acc.id} value={acc.id}>{acc.accountType || acc.type}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

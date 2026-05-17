@@ -239,3 +239,132 @@ export async function getReceiptPaymentReport(filters: ReceiptPaymentFilter = {}
     },
   };
 }
+
+export async function getReceiptPaymentStatement(startDate: string, endDate: string) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  end.setHours(23, 59, 59, 999);
+
+  // 1. Opening Balance (Cash/Bank Accounts before period)
+  const openingBalanceAccounts = await db.account.findMany({
+    where: { type: { in: ["CASH", "BANK"] } },
+    include: {
+      transactions: {
+        where: { date: { lt: start } },
+        select: { debit: true, credit: true },
+      },
+    },
+  });
+
+  let totalOpeningBalance = 0;
+  const openingBalanceDetails: any = [];
+
+  openingBalanceAccounts.forEach(account => {
+    const totalDebit = account.transactions.reduce((sum, tx) => sum + tx.debit, 0);
+    const totalCredit = account.transactions.reduce((sum, tx) => sum + tx.credit, 0);
+    const balance = totalDebit - totalCredit;
+    totalOpeningBalance += balance;
+    openingBalanceDetails.push({ name: account.accountType || account.type, balance });
+  });
+
+  // 2. Direct Incomes from Receipts table grouped by accountType
+  const receipts = await db.receipt.findMany({
+    where: { date: { gte: start, lte: end } },
+    select: { amount: true, accountType: true, category: true },
+  });
+
+  const directIncomesMap = new Map<string, number>();
+  receipts.forEach(r => {
+    const label = r.accountType || r.category || "Other Income";
+    const current = directIncomesMap.get(label) || 0;
+    directIncomesMap.set(label, current + r.amount);
+  });
+
+  const directIncomes = Array.from(directIncomesMap.entries()).map(([name, amount]) => ({ name, amount }));
+  const totalDirectIncomes = directIncomes.reduce((sum, item) => sum + item.amount, 0);
+
+  // 3. Payments from Payments table grouped by category
+  const payments = await db.payment.findMany({
+    where: { date: { gte: start, lte: end } },
+    select: { amount: true, category: true, accountType: true },
+  });
+
+  const fixedAssetsMap = new Map<string, number>();
+  const currentAssetsMap = new Map<string, number>();
+  const indirectExpensesMap = new Map<string, number>();
+
+  payments.forEach(p => {
+    if (p.category === "Fixed Assets") {
+      const label = p.accountType || p.category;
+      const current = fixedAssetsMap.get(label) || 0;
+      fixedAssetsMap.set(label, current + p.amount);
+    } else if (p.category === "Deposits (Assets)") {
+      const label = p.accountType || p.category;
+      const current = currentAssetsMap.get(label) || 0;
+      currentAssetsMap.set(label, current + p.amount);
+    } else {
+      const label = p.accountType || p.category || "Other Expenses";
+      const current = indirectExpensesMap.get(label) || 0;
+      indirectExpensesMap.set(label, current + p.amount);
+    }
+  });
+
+  const fixedAssets = Array.from(fixedAssetsMap.entries()).map(([name, amount]) => ({ name, amount }));
+  const totalFixedAssets = fixedAssets.reduce((sum, item) => sum + item.amount, 0);
+
+  const currentAssets = Array.from(currentAssetsMap.entries()).map(([name, amount]) => ({ name, amount }));
+  const totalCurrentAssets = currentAssets.reduce((sum, item) => sum + item.amount, 0);
+
+  const indirectExpenses = Array.from(indirectExpensesMap.entries()).map(([name, amount]) => ({ name, amount }));
+  const totalIndirectExpenses = indirectExpenses.reduce((sum, item) => sum + item.amount, 0);
+
+  // 4. Closing Balance (Cash/Bank Accounts up to end date)
+  const closingBalanceAccounts = await db.account.findMany({
+    where: { type: { in: ["CASH", "BANK"] } },
+    include: {
+      transactions: {
+        where: { date: { lte: end } },
+        select: { debit: true, credit: true },
+      },
+    },
+  });
+
+  let totalClosingBalance = 0;
+  const closingBalanceDetails: any = [];
+
+  closingBalanceAccounts.forEach(account => {
+    const totalDebit = account.transactions.reduce((sum, tx) => sum + tx.debit, 0);
+    const totalCredit = account.transactions.reduce((sum, tx) => sum + tx.credit, 0);
+    const balance = totalDebit - totalCredit;
+    totalClosingBalance += balance;
+    closingBalanceDetails.push({ name: account.accountType || account.type, balance });
+  });
+
+  const totalReceipts = totalOpeningBalance + totalDirectIncomes;
+  const totalPayments = totalFixedAssets + totalCurrentAssets + totalIndirectExpenses + totalClosingBalance;
+
+  return {
+    openingBalance: {
+      total: totalOpeningBalance,
+      details: openingBalanceDetails,
+    },
+    directIncomes: {
+      total: totalDirectIncomes,
+      details: directIncomes,
+    },
+    payments: {
+      fixedAssets: { total: totalFixedAssets, details: fixedAssets },
+      currentAssets: { total: totalCurrentAssets, details: currentAssets },
+      indirectExpenses: { total: totalIndirectExpenses, details: indirectExpenses },
+    },
+    closingBalance: {
+      total: totalClosingBalance,
+      details: closingBalanceDetails,
+    },
+    totalReceipts,
+    totalPayments,
+  };
+}
