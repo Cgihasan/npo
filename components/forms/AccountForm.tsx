@@ -20,26 +20,81 @@ interface AccountFormProps {
   submitAction: (dataOrId: any, data?: any) => Promise<any>;
 }
 
+const CATEGORY_OPTIONS: Record<string, string[]> = {
+  INCOME: ["Direct Incomes", "Indirect Incomes"],
+  EXPENSE: ["Indirect Expenses", "Fixed Assets", "Deposits (Assets)"],
+};
+
+const ACCOUNT_TYPE_OPTIONS: Record<string, string[]> = {
+  INCOME: ["Donation A/C", "Bank Interest", "Revesal Charges"],
+  EXPENSE: ["Revenue Exp", "Other Exp"],
+};
+
+const TYPE_OPTIONS = [
+  { value: "CASH", label: "Cash" },
+  { value: "BANK", label: "Bank" },
+  { value: "INCOME", label: "Income" },
+  { value: "EXPENSE", label: "Expense" },
+  { value: "ASSET", label: "Asset" },
+  { value: "LIABILITY", label: "Liability" },
+];
+
+const TYPE_LABELS = Object.fromEntries(TYPE_OPTIONS.map((o) => [o.value, o.label]));
+
+export function getAccountGroup(acc: { type: string; category?: string | null }) {
+  if (acc.category) return acc.category;
+  return TYPE_LABELS[acc.type] || acc.type;
+}
+
+export function getAccountLedger(acc: {
+  type: string;
+  category?: string | null;
+  accountType?: string | null;
+}) {
+  if (acc.accountType) return acc.accountType;
+  return null;
+}
+
+function formatAccountLabel(acc: any) {
+  const ledger = getAccountLedger(acc);
+  if (ledger) return ledger;
+  return getAccountGroup(acc);
+}
+
+export { formatAccountLabel };
+
 export function AccountForm({ initialData, onSuccess, onCancel, submitAction }: AccountFormProps) {
-  const [name, setName] = useState(initialData?.name || "");
   const [type, setType] = useState(initialData?.type || "");
+  const [category, setCategory] = useState(initialData?.category || "");
+  const [accountType, setAccountType] = useState(initialData?.accountType || "");
   const [balance, setBalance] = useState(initialData?.balance !== undefined ? String(initialData.balance) : "");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isCashOrBank = type === "CASH" || type === "BANK";
+  const showCategory = !isCashOrBank && type !== "ASSET" && type !== "LIABILITY";
+  const showAccountTypeSelect = type === "INCOME" || type === "EXPENSE";
+  const showAccountTypeInput = isCashOrBank;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!type) {
-      toast.error("Please select an account type");
+      toast.error("Please select a type");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const payload = { 
-        name, 
-        type, 
+      const payload: any = { 
+        type,
         balance: balance ? Number(balance) : 0 
       };
+
+      if (showCategory) {
+        payload.category = category || null;
+      }
+      if (showAccountTypeSelect || showAccountTypeInput) {
+        payload.accountType = accountType || null;
+      }
 
       if (initialData?.id) {
         await submitAction(initialData.id, payload);
@@ -59,32 +114,62 @@ export function AccountForm({ initialData, onSuccess, onCancel, submitAction }: 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 pt-4">
       <div className="space-y-2">
-        <Label htmlFor="name">Account Name</Label>
-        <Input 
-          id="name" 
-          value={name} 
-          onChange={(e) => setName(e.target.value)} 
-          required 
-          placeholder="e.g., Rent Advance, Paint Expenses" 
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="type">Account Type</Label>
-        <Select value={type} onValueChange={setType} required>
+        <Label htmlFor="type">Type</Label>
+        <Select value={type} onValueChange={(v) => { setType(v); setCategory(""); setAccountType(""); }} required>
           <SelectTrigger>
             <SelectValue placeholder="Select type" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ASSET">Asset</SelectItem>
-            <SelectItem value="LIABILITY">Liability</SelectItem>
-            <SelectItem value="INCOME">Income</SelectItem>
-            <SelectItem value="EXPENSE">Expense</SelectItem>
-            <SelectItem value="BANK">Bank</SelectItem>
-            <SelectItem value="CASH">Cash</SelectItem>
+            {TYPE_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
+
+      {showCategory && (
+        <div className="space-y-2">
+          <Label htmlFor="category">Group</Label>
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select group" />
+            </SelectTrigger>
+            <SelectContent>
+              {(CATEGORY_OPTIONS[type] || []).map((opt) => (
+                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {showAccountTypeInput && (
+        <div className="space-y-2">
+          <Label htmlFor="accountType">Ledger</Label>
+          <Input
+            id="accountType"
+            value={accountType}
+            onChange={(e) => setAccountType(e.target.value)}
+            placeholder={type === "BANK" ? "e.g., City Union Bank" : "e.g., Cash In Hand"}
+          />
+        </div>
+      )}
+
+      {showAccountTypeSelect && (
+        <div className="space-y-2">
+          <Label htmlFor="accountType">Ledger</Label>
+          <Select value={accountType} onValueChange={setAccountType}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select ledger" />
+            </SelectTrigger>
+            <SelectContent>
+              {(ACCOUNT_TYPE_OPTIONS[type] || []).map((opt) => (
+                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="balance">Opening Balance (Optional)</Label>

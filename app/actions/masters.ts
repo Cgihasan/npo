@@ -18,7 +18,41 @@ export async function getVendors() {
 export async function getAccounts() {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
-  return await db.account.findMany({ orderBy: { name: "asc" } });
+  return await db.account.findMany({
+    orderBy: [{ category: "asc" }, { accountType: "asc" }, { type: "asc" }],
+  });
+}
+
+export async function getReceiptTypes() {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+  
+  const receipts = await db.receipt.findMany({
+    select: { type: true, category: true, accountType: true, amount: true },
+  });
+
+  const map = new Map<string, { type: string; category: string | null; accountType: string | null; total: number }>();
+  
+  receipts.forEach(r => {
+    if (!r.type) return;
+    const existing = map.get(r.type);
+    if (existing) {
+      existing.total += r.amount;
+    } else {
+      map.set(r.type, {
+        type: "INCOME",
+        category: r.category || null,
+        accountType: r.accountType || null,
+        total: r.amount,
+      });
+    }
+  });
+
+  return Array.from(map.entries()).map(([name, data]) => ({
+    id: name,
+    name,
+    ...data,
+  })).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function getAssetAccounts() {
@@ -30,7 +64,7 @@ export async function getAssetAccounts() {
         in: ["CASH", "BANK"]
       }
     },
-    orderBy: { name: "asc" }
+    orderBy: { accountType: "asc" }
   });
 }
 export async function createDonor(data: { name: string; email?: string; phone?: string; address?: string }) {
@@ -45,13 +79,14 @@ export async function createVendor(data: { name: string; email?: string; phone?:
   return await db.vendor.create({ data });
 }
 
-export async function createAccount(data: { name: string; type: string; balance?: number }) {
+export async function createAccount(data: { type: string; category?: string; accountType?: string; balance?: number }) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
   return await db.account.create({ 
     data: {
-      name: data.name,
       type: data.type,
+      category: data.category || null,
+      accountType: data.accountType || null,
       balance: data.balance || 0,
     }
   });
@@ -70,14 +105,15 @@ export async function updateVendor(id: string, data: { name: string; email?: str
   return await db.vendor.update({ where: { id }, data });
 }
 
-export async function updateAccount(id: string, data: { name: string; type: string; balance?: number }) {
+export async function updateAccount(id: string, data: { type: string; category?: string; accountType?: string; balance?: number }) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
   return await db.account.update({ 
     where: { id },
     data: {
-      name: data.name,
       type: data.type,
+      category: data.category || null,
+      accountType: data.accountType || null,
       balance: data.balance || 0,
     }
   });

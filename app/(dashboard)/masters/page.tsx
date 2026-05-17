@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { 
-  getDonors, getVendors, getAccounts, 
+  getDonors, getVendors, getAccounts,
   createDonor, createVendor, createAccount,
   updateDonor, updateVendor, updateAccount,
   deleteDonor, deleteVendor, deleteAccount
@@ -35,7 +35,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { MasterForm } from "@/components/forms/MasterForm";
-import { AccountForm } from "@/components/forms/AccountForm";
+import { AccountForm, getAccountGroup, getAccountLedger } from "@/components/forms/AccountForm";
 
 export default function MastersPage() {
   const [donors, setDonors] = useState<any[]>([]);
@@ -243,7 +243,7 @@ export default function MastersPage() {
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Account Heads</CardTitle>
-                <CardDescription>Chart of accounts for bookkeeping.</CardDescription>
+                <CardDescription>Chart of accounts with group and ledger names.</CardDescription>
               </div>
               <Button onClick={() => { setEditingItem(null); setIsAccountDialogOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white">
                 <Plus className="mr-2 h-4 w-4" /> Add Account
@@ -253,22 +253,28 @@ export default function MastersPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="text-right">Balance</TableHead>
+                    <TableHead>Group</TableHead>
+                    <TableHead>Ledger</TableHead>
+                    <TableHead className="text-right">Opening Balance</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                     <TableRow><TableCell colSpan={4} className="text-center">Loading...</TableCell></TableRow>
+                  ) : accounts.length === 0 ? (
+                    <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No accounts found.</TableCell></TableRow>
                   ) : accounts.map((acc) => (
                     <TableRow key={acc.id}>
-                      <TableCell className="font-medium">{acc.name}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary">{acc.type}</Badge>
+                        <Badge variant="outline">{getAccountGroup(acc)}</Badge>
                       </TableCell>
-                      <TableCell className="text-right font-bold">
+                      <TableCell className="font-medium">
+                        {getAccountLedger(acc) ?? (
+                          <span className="text-muted-foreground font-normal">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-bold tabular-nums">
                         ₹{Number(acc.balance).toLocaleString()}
                       </TableCell>
                       <TableCell className="text-right">
