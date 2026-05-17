@@ -2,6 +2,7 @@
 
 import db from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
 
 export async function getDonors() {
   const session = await auth();
@@ -90,6 +91,95 @@ export async function createAccount(data: { type: string; category?: string; acc
       balance: data.balance || 0,
     }
   });
+}
+
+export type LedgerHint = "auto" | "asset" | "income" | "expense";
+
+function inferAccountTypeFromLedgerName(
+  ledgerName: string,
+  hint: LedgerHint = "auto"
+): {
+  type: string;
+  category: string | null;
+} {
+  const lower = ledgerName.toLowerCase();
+
+  if (hint === "asset") {
+    if (/\bbank\b/.test(lower)) return { type: "BANK", category: null };
+    return { type: "CASH", category: null };
+  }
+  if (hint === "income") {
+    return { type: "INCOME", category: "Direct Incomes" };
+  }
+  if (hint === "expense") {
+    if (/\b(asset|furniture|equipment)\b/.test(lower)) {
+      return { type: "EXPENSE", category: "Fixed Assets" };
+    }
+    if (/\b(deposit|advance)\b/.test(lower)) {
+      return { type: "EXPENSE", category: "Deposits (Assets)" };
+    }
+    return { type: "EXPENSE", category: "Indirect Expenses" };
+  }
+
+  if (/\bbank\b/.test(lower)) return { type: "BANK", category: null };
+  if (/\bcash\b/.test(lower)) return { type: "CASH", category: null };
+  if (
+    /\b(expense|expenses|rent|salary|salaries|charges|utilities|printing)\b/.test(
+      lower
+    )
+  ) {
+    return { type: "EXPENSE", category: "Indirect Expenses" };
+  }
+  if (/\b(asset|furniture|equipment)\b/.test(lower)) {
+    return { type: "EXPENSE", category: "Fixed Assets" };
+  }
+  if (/\b(deposit|advance)\b/.test(lower)) {
+    return { type: "EXPENSE", category: "Deposits (Assets)" };
+  }
+  return { type: "INCOME", category: "Direct Incomes" };
+}
+
+/** Find chart-of-accounts row by ledger name, or create one for journal entry. */
+export async function findOrCreateAccountByLedger(
+  ledgerName: string,
+  options?: { hint?: LedgerHint }
+) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+
+  const trimmed = ledgerName.trim();
+  if (!trimmed) throw new Error("Ledger name is required");
+
+  const accounts = await db.account.findMany();
+  const normalized = trimmed.toLowerCase();
+
+  const existing = accounts.find((acc) => {
+    const ledger = acc.accountType?.trim().toLowerCase();
+    if (ledger === normalized) return true;
+    const full = [acc.type, acc.category, acc.accountType]
+      .filter(Boolean)
+      .join(" - ")
+      .toLowerCase();
+    return full === normalized;
+  });
+
+  if (existing) return existing;
+
+  const { type, category } = inferAccountTypeFromLedgerName(
+    trimmed,
+    options?.hint ?? "auto"
+  );
+  const account = await db.account.create({
+    data: {
+      type,
+      category,
+      accountType: trimmed,
+      balance: 0,
+    },
+  });
+
+  revalidatePath("/masters");
+  return account;
 }
 
 // Update Actions

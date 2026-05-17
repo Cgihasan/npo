@@ -61,6 +61,17 @@ function formatAccountLabel(acc: any) {
   return getAccountGroup(acc);
 }
 
+export function formatAccountFullLabel(acc: {
+  type: string;
+  category?: string | null;
+  accountType?: string | null;
+}) {
+  if (acc.type === "CASH" || acc.type === "BANK") {
+    return acc.accountType || acc.type;
+  }
+  return [acc.type, acc.category, acc.accountType].filter(Boolean).join(" - ");
+}
+
 export { formatAccountLabel };
 
 export function AccountForm({ initialData, onSuccess, onCancel, submitAction }: AccountFormProps) {

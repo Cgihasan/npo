@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/db";
 import { auth } from "@/lib/auth";
+import {
+  postPaymentLedgerEntries,
+  resolveExpenseAccountId,
+} from "@/lib/voucher-ledger";
 
 export async function POST(req: Request) {
   try {
@@ -45,15 +49,19 @@ export async function POST(req: Request) {
         },
       });
 
-      await tx.transaction.create({
-        data: {
-          accountId,
-          debit: 0,
-          credit: amount,
-          refType: "PAYMENT",
-          refId: payment.id,
-          date: new Date(date),
-        },
+      const paymentDate = new Date(date);
+      const expenseAccountId = await resolveExpenseAccountId(tx, {
+        type,
+        category,
+        accountType,
+      });
+
+      await postPaymentLedgerEntries(tx, {
+        paymentId: payment.id,
+        date: paymentDate,
+        amount: Number(amount),
+        assetAccountId: accountId,
+        expenseAccountId,
       });
 
       return payment;

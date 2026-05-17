@@ -6,14 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { getAccounts, findOrCreateAccountByLedger } from "@/app/actions/masters";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { getAccounts } from "@/app/actions/masters";
+  JournalAccountPicker,
+  type JournalAccountValue,
+} from "@/components/forms/JournalAccountPicker";
 import { createJournalVoucher } from "@/app/actions/journal";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Trash } from "lucide-react";
@@ -27,7 +24,9 @@ export default function NewJournalPage() {
 
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [narration, setNarration] = useState("");
-  const [entries, setEntries] = useState([{ id: 1, accountId: "", debit: "", credit: "" }]);
+  const [entries, setEntries] = useState<
+    { id: number; accountId: string; accountLabel: string; debit: string; credit: string }[]
+  >([{ id: 1, accountId: "", accountLabel: "", debit: "", credit: "" }]);
 
   useEffect(() => {
     async function loadData() {
@@ -44,7 +43,7 @@ export default function NewJournalPage() {
   const handleAddRow = () => {
     setEntries([
       ...entries,
-      { id: Date.now(), accountId: "", debit: "", credit: "" }
+      { id: Date.now(), accountId: "", accountLabel: "", debit: "", credit: "" }
     ]);
   };
 
@@ -58,7 +57,6 @@ export default function NewJournalPage() {
     setEntries(entries.map(e => {
       if (e.id === id) {
         const updated = { ...e, [field]: value };
-        // If user enters debit, clear credit and vice versa
         if (field === "debit" && Number(value) > 0) {
           updated.credit = "";
         }
@@ -71,11 +69,30 @@ export default function NewJournalPage() {
     }));
   };
 
+  const updateEntryAccount = (id: number, account: JournalAccountValue) => {
+    setEntries(entries.map(e =>
+      e.id === id
+        ? { ...e, accountId: account.accountId, accountLabel: account.accountLabel }
+        : e
+    ));
+  };
+
+  const handleAccountCreated = (account: { id: string; type: string; category?: string | null; accountType?: string | null }) => {
+    setAccounts((prev) => {
+      if (prev.some((a) => a.id === account.id)) return prev;
+      return [...prev, account];
+    });
+  };
+
   const totalDebit = entries.reduce((sum, e) => sum + (Number(e.debit) || 0), 0);
   const totalCredit = entries.reduce((sum, e) => sum + (Number(e.credit) || 0), 0);
   const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
   const hasAmount = totalDebit > 0;
-  const isFormValid = isBalanced && hasAmount && date && entries.every(e => e.accountId !== "");
+  const isFormValid =
+    isBalanced &&
+    hasAmount &&
+    date &&
+    entries.every((e) => e.accountId !== "" || e.accountLabel.trim() !== "");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,14 +103,26 @@ export default function NewJournalPage() {
 
     try {
       setIsSubmitting(true);
+
+      const resolvedEntries = await Promise.all(
+        entries.map(async (e) => {
+          let accountId = e.accountId;
+          if (!accountId && e.accountLabel.trim()) {
+            const account = await findOrCreateAccountByLedger(e.accountLabel.trim());
+            accountId = account.id;
+          }
+          return {
+            accountId,
+            debit: Number(e.debit) || 0,
+            credit: Number(e.credit) || 0,
+          };
+        })
+      );
+
       await createJournalVoucher({
         date,
         narration,
-        entries: entries.map(e => ({
-          accountId: e.accountId,
-          debit: Number(e.debit) || 0,
-          credit: Number(e.credit) || 0
-        }))
+        entries: resolvedEntries,
       });
       toast.success("Journal voucher created successfully");
       router.push("/journal");
@@ -169,23 +198,15 @@ export default function NewJournalPage() {
                 <div key={entry.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end md:items-center p-4 md:p-0 border rounded-md md:border-0 bg-muted/20 md:bg-transparent">
                   <div className="col-span-1 md:col-span-6 space-y-2 md:space-y-0">
                     <Label className="md:hidden">Account</Label>
-                    <Select
-                      value={entry.accountId}
-                      onValueChange={(value) => updateEntry(entry.id, "accountId", value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {accounts.map((acc) => (
-                          <SelectItem key={acc.id} value={acc.id}>
-                            {acc.type === "CASH" || acc.type === "BANK"
-                              ? (acc.accountType || acc.type)
-                              : [acc.type, acc.category, acc.accountType].filter(Boolean).join(" - ")}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <JournalAccountPicker
+                      accounts={accounts}
+                      value={{
+                        accountId: entry.accountId,
+                        accountLabel: entry.accountLabel,
+                      }}
+                      onChange={(account) => updateEntryAccount(entry.id, account)}
+                      onAccountCreated={handleAccountCreated}
+                    />
                   </div>
 
                   <div className="col-span-1 md:col-span-2 space-y-2 md:space-y-0">

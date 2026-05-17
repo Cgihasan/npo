@@ -267,7 +267,7 @@ export async function getReceiptPaymentStatement(startDate: string, endDate: str
     const totalCredit = account.transactions.reduce((sum, tx) => sum + tx.credit, 0);
     const balance = totalDebit - totalCredit;
     totalOpeningBalance += balance;
-    openingBalanceDetails.push({ name: account.accountType || account.type, balance });
+    openingBalanceDetails.push({ name: account.accountType || account.type, value: balance });
   });
 
   // 2. Direct Incomes from Receipts table grouped by accountType
@@ -283,8 +283,8 @@ export async function getReceiptPaymentStatement(startDate: string, endDate: str
     directIncomesMap.set(label, current + r.amount);
   });
 
-  const directIncomes = Array.from(directIncomesMap.entries()).map(([name, amount]) => ({ name, amount }));
-  const totalDirectIncomes = directIncomes.reduce((sum, item) => sum + item.amount, 0);
+  const directIncomes = Array.from(directIncomesMap.entries()).map(([name, amount]) => ({ name, value: amount }));
+  const totalDirectIncomes = directIncomes.reduce((sum, item) => sum + item.value, 0);
 
   // 3. Payments from Payments table grouped by category
   const payments = await db.payment.findMany({
@@ -312,14 +312,14 @@ export async function getReceiptPaymentStatement(startDate: string, endDate: str
     }
   });
 
-  const fixedAssets = Array.from(fixedAssetsMap.entries()).map(([name, amount]) => ({ name, amount }));
-  const totalFixedAssets = fixedAssets.reduce((sum, item) => sum + item.amount, 0);
+  const fixedAssets = Array.from(fixedAssetsMap.entries()).map(([name, amount]) => ({ name, value: amount }));
+  const totalFixedAssets = fixedAssets.reduce((sum, item) => sum + item.value, 0);
 
-  const currentAssets = Array.from(currentAssetsMap.entries()).map(([name, amount]) => ({ name, amount }));
-  const totalCurrentAssets = currentAssets.reduce((sum, item) => sum + item.amount, 0);
+  const currentAssets = Array.from(currentAssetsMap.entries()).map(([name, amount]) => ({ name, value: amount }));
+  const totalCurrentAssets = currentAssets.reduce((sum, item) => sum + item.value, 0);
 
-  const indirectExpenses = Array.from(indirectExpensesMap.entries()).map(([name, amount]) => ({ name, amount }));
-  const totalIndirectExpenses = indirectExpenses.reduce((sum, item) => sum + item.amount, 0);
+  const indirectExpenses = Array.from(indirectExpensesMap.entries()).map(([name, amount]) => ({ name, value: amount }));
+  const totalIndirectExpenses = indirectExpenses.reduce((sum, item) => sum + item.value, 0);
 
   // 4. Closing Balance (Cash/Bank Accounts up to end date)
   const closingBalanceAccounts = await db.account.findMany({
@@ -340,7 +340,7 @@ export async function getReceiptPaymentStatement(startDate: string, endDate: str
     const totalCredit = account.transactions.reduce((sum, tx) => sum + tx.credit, 0);
     const balance = totalDebit - totalCredit;
     totalClosingBalance += balance;
-    closingBalanceDetails.push({ name: account.accountType || account.type, balance });
+    closingBalanceDetails.push({ name: account.accountType || account.type, value: balance });
   });
 
   const totalReceipts = totalOpeningBalance + totalDirectIncomes;

@@ -3,6 +3,11 @@
 import db from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import {
+  postReceiptLedgerEntries,
+  replaceReceiptLedgerEntries,
+  resolveIncomeAccountId,
+} from "@/lib/voucher-ledger";
 
 export async function createReceipt(data: any) {
   const session = await auth();
@@ -66,15 +71,18 @@ export async function createReceipt(data: any) {
       },
     });
 
-    await tx.transaction.create({
-      data: {
-        accountId,
-        debit: numAmount,
-        credit: 0,
-        refType: "RECEIPT",
-        refId: receipt.id,
-        date: new Date(date),
-      },
+    const incomeAccountId = await resolveIncomeAccountId(tx, {
+      type,
+      category,
+      accountType,
+    });
+
+    await postReceiptLedgerEntries(tx, {
+      receiptId: receipt.id,
+      date: receiptDate,
+      amount: numAmount,
+      assetAccountId: accountId,
+      incomeAccountId,
     });
 
     return receipt;
@@ -82,6 +90,7 @@ export async function createReceipt(data: any) {
 
   revalidatePath("/receipts");
   revalidatePath("/dashboard");
+  revalidatePath("/reports");
   return result;
 }
 
@@ -133,17 +142,18 @@ export async function updateReceipt(id: string, data: any) {
       },
     });
 
-    // Update associated transaction
-    await tx.transaction.updateMany({
-      where: {
-        refId: id,
-        refType: "RECEIPT",
-      },
-      data: {
-        accountId,
-        debit: numAmount,
-        date: receiptDate,
-      },
+    const incomeAccountId = await resolveIncomeAccountId(tx, {
+      type,
+      category,
+      accountType,
+    });
+
+    await replaceReceiptLedgerEntries(tx, {
+      receiptId: id,
+      date: receiptDate,
+      amount: numAmount,
+      assetAccountId: accountId,
+      incomeAccountId,
     });
 
     return receipt;
@@ -151,6 +161,7 @@ export async function updateReceipt(id: string, data: any) {
 
   revalidatePath("/receipts");
   revalidatePath("/dashboard");
+  revalidatePath("/reports");
   return result;
 }
 

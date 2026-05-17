@@ -26,24 +26,33 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
-import { useEffect, useState } from "react";
-import { getDonors, getAssetAccounts } from "@/app/actions/masters";
+import { useEffect, useMemo, useState } from "react";
+import {
+  getDonors,
+  getAccounts,
+  findOrCreateAccountByLedger,
+} from "@/app/actions/masters";
 import { createReceipt, updateReceipt, getNextReceiptNumber } from "@/app/actions/receipts";
+import {
+  JournalAccountPicker,
+  type JournalAccountValue,
+} from "@/components/forms/JournalAccountPicker";
+import { formatAccountFullLabel } from "@/components/forms/AccountForm";
 
 const receiptFormSchema = z.object({
   receiptNo: z.string(),
   date: z.string(),
   donorId: z.string().optional(),
-  type: z.string().min(1, "Please select a receipt type."),
-  category: z.string().min(1, "Please select an account category."),
-  accountType: z.string().min(1, "Please select an account type."),
+  type: z.string().min(1, "Please select or enter an income ledger."),
+  category: z.string().optional(),
+  accountType: z.string().optional(),
   eventName: z.string().optional(),
   amount: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
     message: "Amount must be a positive number.",
   }),
   paymentMode: z.string().min(1, "Please select a payment mode."),
   referenceNo: z.string().optional(),
-  accountId: z.string().min(1, "Please select an account head."),
+  accountId: z.string().optional(),
   narration: z.string().optional(),
 });
 
@@ -58,13 +67,30 @@ export function ReceiptForm({ initialData }: ReceiptFormProps) {
   const [donors, setDonors] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [depositAccount, setDepositAccount] = useState<JournalAccountValue>({
+    accountId: initialData?.accountId || "",
+    accountLabel: "",
+  });
+  const [incomeLedger, setIncomeLedger] = useState<JournalAccountValue>({
+    accountId: "",
+    accountLabel: initialData?.type || "",
+  });
+
+  const assetAccounts = useMemo(
+    () => accounts.filter((a) => a.type === "CASH" || a.type === "BANK"),
+    [accounts]
+  );
+  const incomeAccounts = useMemo(
+    () => accounts.filter((a) => a.type === "INCOME"),
+    [accounts]
+  );
 
   useEffect(() => {
     async function loadData() {
       try {
         const [donorsList, accountsList] = await Promise.all([
           getDonors(),
-          getAssetAccounts(),
+          getAccounts(),
         ]);
         setDonors(donorsList);
         setAccounts(accountsList);
@@ -74,6 +100,28 @@ export function ReceiptForm({ initialData }: ReceiptFormProps) {
     }
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (!accounts.length) return;
+    if (initialData?.accountId) {
+      const acc = accounts.find((a) => a.id === initialData.accountId);
+      if (acc) {
+        setDepositAccount({
+          accountId: acc.id,
+          accountLabel: formatAccountFullLabel(acc),
+        });
+      }
+    }
+    if (initialData?.type) {
+      const match = incomeAccounts.find(
+        (a) => a.accountType?.toLowerCase() === initialData.type.toLowerCase()
+      );
+      setIncomeLedger({
+        accountId: match?.id || "",
+        accountLabel: initialData.type,
+      });
+    }
+  }, [accounts, incomeAccounts, initialData]);
 
   const form = useForm<ReceiptFormValues>({
     resolver: zodResolver(receiptFormSchema),
@@ -111,14 +159,68 @@ export function ReceiptForm({ initialData }: ReceiptFormProps) {
     updateReceiptNo();
   }, [selectedDate, form, initialData]);
 
+  const applyIncomeAccount = (account: {
+    id: string;
+    accountType?: string | null;
+    category?: string | null;
+  }) => {
+    const ledger = account.accountType || "";
+    form.setValue("type", ledger, { shouldValidate: true });
+    form.setValue("category", account.category || "Direct Incomes", {
+      shouldValidate: true,
+    });
+    form.setValue("accountType", ledger, { shouldValidate: true });
+    setIncomeLedger({
+      accountId: account.id,
+      accountLabel: ledger,
+    });
+  };
+
   async function onSubmit(data: ReceiptFormValues) {
     try {
       setIsSubmitting(true);
+
+      let accountId = data.accountId || depositAccount.accountId;
+      if (!accountId && depositAccount.accountLabel.trim()) {
+        const acc = await findOrCreateAccountByLedger(
+          depositAccount.accountLabel.trim(),
+          { hint: "asset" }
+        );
+        accountId = acc.id;
+        setDepositAccount({
+          accountId: acc.id,
+          accountLabel: formatAccountFullLabel(acc),
+        });
+      }
+      if (!accountId) {
+        form.setError("accountId", {
+          message: "Please select or enter a deposit account (Cash/Bank).",
+        });
+        return;
+      }
+
+      let type = data.type?.trim() || incomeLedger.accountLabel.trim();
+      if (!type) {
+        form.setError("type", {
+          message: "Please select or enter an income ledger.",
+        });
+        return;
+      }
+
+      const incomeAcc = await findOrCreateAccountByLedger(type, { hint: "income" });
+      const payload = {
+        ...data,
+        accountId,
+        type: incomeAcc.accountType || type,
+        category: incomeAcc.category || data.category || "Direct Incomes",
+        accountType: incomeAcc.accountType || type,
+      };
+
       if (initialData?.id) {
-        await updateReceipt(initialData.id, data);
+        await updateReceipt(initialData.id, payload);
         toast.success("Receipt updated successfully!");
       } else {
-        await createReceipt(data);
+        await createReceipt(payload);
         toast.success("Receipt created successfully!");
       }
       router.push("/receipts");
@@ -196,23 +298,39 @@ export function ReceiptForm({ initialData }: ReceiptFormProps) {
                 name="type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Receipt Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="General Donation">General Donation</SelectItem>
-                        <SelectItem value="Special Donation">Special Donation</SelectItem>
-                        <SelectItem value="Bank Charges">Bank Charges</SelectItem>
-                        <SelectItem value="Interest Capitalized From Bank">Interest Capitalized From Bank</SelectItem>
-                        <SelectItem value="Subscription">Subscription</SelectItem>
-                        <SelectItem value="Deposit Reverse">Deposit Reverse</SelectItem>
-                        <SelectItem value="Cancellation Reverse">Cancellation Reverse</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Income Ledger</FormLabel>
+                    <FormControl>
+                      <JournalAccountPicker
+                        accounts={incomeAccounts}
+                        ledgerHint="income"
+                        placeholder='e.g. Donation for Startup A/c'
+                        value={incomeLedger}
+                        onChange={(value) => {
+                          setIncomeLedger(value);
+                          field.onChange(value.accountLabel);
+                          if (value.accountId) {
+                            const acc = incomeAccounts.find(
+                              (a) => a.id === value.accountId
+                            );
+                            if (acc) applyIncomeAccount(acc);
+                          } else {
+                            form.setValue("category", "", { shouldValidate: false });
+                            form.setValue("accountType", "", { shouldValidate: false });
+                          }
+                        }}
+                        onAccountCreated={(account) => {
+                          setAccounts((prev) =>
+                            prev.some((a) => a.id === account.id)
+                              ? prev
+                              : [...prev, account]
+                          );
+                          applyIncomeAccount(account);
+                        }}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Type a new income ledger or pick from the chart of accounts.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -220,45 +338,12 @@ export function ReceiptForm({ initialData }: ReceiptFormProps) {
               <FormField
                 control={form.control}
                 name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Account Category</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Direct Incomes">Direct Incomes</SelectItem>
-                        <SelectItem value="Indirect Incomes">Indirect Incomes</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => <input type="hidden" {...field} />}
               />
               <FormField
                 control={form.control}
                 name="accountType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Account Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select account type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Donation A/C">Donation A/C</SelectItem>
-                        <SelectItem value="Revesal Charges">Revesal Charges</SelectItem>
-                        <SelectItem value="Bank Interest">Bank Interest</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => <input type="hidden" {...field} />}
               />
               <FormField
                 control={form.control}
@@ -350,19 +435,34 @@ export function ReceiptForm({ initialData }: ReceiptFormProps) {
                 name="accountId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Deposit To (Account Head)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select account" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {accounts.map((acc) => (
-                          <SelectItem key={acc.id} value={acc.id}>{acc.accountType || acc.type}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Deposit To (Cash / Bank)</FormLabel>
+                    <FormControl>
+                      <JournalAccountPicker
+                        accounts={assetAccounts}
+                        ledgerHint="asset"
+                        placeholder="e.g. City Union Bank, Cash In Hand"
+                        value={depositAccount}
+                        onChange={(value) => {
+                          setDepositAccount(value);
+                          field.onChange(value.accountId);
+                        }}
+                        onAccountCreated={(account) => {
+                          setAccounts((prev) =>
+                            prev.some((a) => a.id === account.id)
+                              ? prev
+                              : [...prev, account]
+                          );
+                          setDepositAccount({
+                            accountId: account.id,
+                            accountLabel: formatAccountFullLabel(account),
+                          });
+                          field.onChange(account.id);
+                        }}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Type a new cash/bank ledger or select an existing one.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

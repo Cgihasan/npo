@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/db";
 import { auth } from "@/lib/auth";
+import {
+  postReceiptLedgerEntries,
+  resolveIncomeAccountId,
+} from "@/lib/voucher-ledger";
 
 export async function POST(req: Request) {
   try {
@@ -14,7 +18,9 @@ export async function POST(req: Request) {
       receiptNo, 
       date, 
       donorId, 
-      type, 
+      type,
+      category,
+      accountType,
       amount, 
       paymentMode, 
       referenceNo, 
@@ -29,12 +35,15 @@ export async function POST(req: Request) {
     // Use a transaction to ensure atomic updates
     const result = await db.$transaction(async (tx) => {
       // 1. Create the Receipt
+      const receiptDate = new Date(date);
       const receipt = await tx.receipt.create({
         data: {
           receiptNo,
-          date: new Date(date),
+          date: receiptDate,
           donorId,
           type,
+          category,
+          accountType,
           amount,
           paymentMode,
           referenceNo,
@@ -43,31 +52,20 @@ export async function POST(req: Request) {
         },
       });
 
-      // 2. Update the Asset Account Balance (Cash/Bank)
-      await tx.account.update({
-        where: { id: accountId },
-        data: {
-          balance: {
-            increment: amount,
-          },
-        },
+      const incomeAccountId = await resolveIncomeAccountId(tx, {
+        type,
+        category,
+        accountType,
       });
 
-      // 3. Create Transaction record for the Asset Account (Debit)
-      await tx.transaction.create({
-        data: {
-          accountId,
-          debit: amount,
-          credit: 0,
-          refType: "RECEIPT",
-          refId: receipt.id,
-          date: new Date(date),
-        },
+      await postReceiptLedgerEntries(tx, {
+        receiptId: receipt.id,
+        date: receiptDate,
+        amount: Number(amount),
+        assetAccountId: accountId,
+        incomeAccountId,
       });
 
-      // Note: In a full double-entry system, we'd also Credit an Income account.
-      // For now, we'll follow the AGENT.md schema which primarily tracks Asset accounts.
-      
       return receipt;
     });
 

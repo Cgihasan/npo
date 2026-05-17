@@ -26,23 +26,31 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
-import { useEffect, useState } from "react";
-import { getVendors, getAssetAccounts } from "@/app/actions/masters";
+import { useEffect, useMemo, useState } from "react";
+import {
+  getAccounts,
+  findOrCreateAccountByLedger,
+} from "@/app/actions/masters";
 import { createPayment, updatePayment, getNextVoucherNumber } from "@/app/actions/payments";
+import {
+  JournalAccountPicker,
+  type JournalAccountValue,
+} from "@/components/forms/JournalAccountPicker";
+import { formatAccountFullLabel } from "@/components/forms/AccountForm";
 
 const paymentFormSchema = z.object({
   voucherNo: z.string(),
   date: z.string(),
-  type: z.string().min(1, "Please select a payment type."),
-  category: z.string().min(1, "Please select an account category."),
-  accountType: z.string().min(1, "Please select an account type."),
+  type: z.string().min(1, "Please select or enter an expense ledger."),
+  category: z.string().optional(),
+  accountType: z.string().optional(),
   amount: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
     message: "Amount must be a positive number.",
   }),
   paymentMode: z.string().min(1, "Please select a payment mode."),
   chequeNo: z.string().optional(),
   bankName: z.string().optional(),
-  accountId: z.string().min(1, "Please select an account head."),
+  accountId: z.string().optional(),
   narration: z.string().optional(),
 });
 
@@ -56,11 +64,28 @@ export function PaymentForm({ initialData }: PaymentFormProps) {
   const router = useRouter();
   const [accounts, setAccounts] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [payFromAccount, setPayFromAccount] = useState<JournalAccountValue>({
+    accountId: initialData?.accountId || "",
+    accountLabel: "",
+  });
+  const [expenseLedger, setExpenseLedger] = useState<JournalAccountValue>({
+    accountId: "",
+    accountLabel: initialData?.type || "",
+  });
+
+  const assetAccounts = useMemo(
+    () => accounts.filter((a) => a.type === "CASH" || a.type === "BANK"),
+    [accounts]
+  );
+  const expenseAccounts = useMemo(
+    () => accounts.filter((a) => a.type === "EXPENSE"),
+    [accounts]
+  );
 
   useEffect(() => {
     async function loadData() {
       try {
-        const accountsList = await getAssetAccounts();
+        const accountsList = await getAccounts();
         setAccounts(accountsList);
       } catch (error) {
         toast.error("Failed to load master data.");
@@ -68,6 +93,28 @@ export function PaymentForm({ initialData }: PaymentFormProps) {
     }
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (!accounts.length) return;
+    if (initialData?.accountId) {
+      const acc = accounts.find((a) => a.id === initialData.accountId);
+      if (acc) {
+        setPayFromAccount({
+          accountId: acc.id,
+          accountLabel: formatAccountFullLabel(acc),
+        });
+      }
+    }
+    if (initialData?.type) {
+      const match = expenseAccounts.find(
+        (a) => a.accountType?.toLowerCase() === initialData.type.toLowerCase()
+      );
+      setExpenseLedger({
+        accountId: match?.id || "",
+        accountLabel: initialData.type,
+      });
+    }
+  }, [accounts, expenseAccounts, initialData]);
 
   const form = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentFormSchema),
@@ -104,14 +151,70 @@ export function PaymentForm({ initialData }: PaymentFormProps) {
     updateVoucherNo();
   }, [selectedDate, form, initialData]);
 
+  const applyExpenseAccount = (account: {
+    id: string;
+    accountType?: string | null;
+    category?: string | null;
+  }) => {
+    const ledger = account.accountType || "";
+    form.setValue("type", ledger, { shouldValidate: true });
+    form.setValue("category", account.category || "Indirect Expenses", {
+      shouldValidate: true,
+    });
+    form.setValue("accountType", ledger, { shouldValidate: true });
+    setExpenseLedger({
+      accountId: account.id,
+      accountLabel: ledger,
+    });
+  };
+
   async function onSubmit(data: PaymentFormValues) {
     try {
       setIsSubmitting(true);
+
+      let accountId = data.accountId || payFromAccount.accountId;
+      if (!accountId && payFromAccount.accountLabel.trim()) {
+        const acc = await findOrCreateAccountByLedger(
+          payFromAccount.accountLabel.trim(),
+          { hint: "asset" }
+        );
+        accountId = acc.id;
+        setPayFromAccount({
+          accountId: acc.id,
+          accountLabel: formatAccountFullLabel(acc),
+        });
+      }
+      if (!accountId) {
+        form.setError("accountId", {
+          message: "Please select or enter a payment account (Cash/Bank).",
+        });
+        return;
+      }
+
+      let type = data.type?.trim() || expenseLedger.accountLabel.trim();
+      if (!type) {
+        form.setError("type", {
+          message: "Please select or enter an expense ledger.",
+        });
+        return;
+      }
+
+      const expenseAcc = await findOrCreateAccountByLedger(type, {
+        hint: "expense",
+      });
+      const payload = {
+        ...data,
+        accountId,
+        type: expenseAcc.accountType || type,
+        category: expenseAcc.category || data.category || "Indirect Expenses",
+        accountType: expenseAcc.accountType || type,
+      };
+
       if (initialData?.id) {
-        await updatePayment(initialData.id, data);
+        await updatePayment(initialData.id, payload);
         toast.success("Payment updated successfully!");
       } else {
-        await createPayment(data);
+        await createPayment(payload);
         toast.success("Payment voucher created!");
       }
       router.push("/payments");
@@ -166,32 +269,39 @@ export function PaymentForm({ initialData }: PaymentFormProps) {
                 name="type"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Payment Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Registration & Paper Works">Registration & Paper Works</SelectItem>
-                        <SelectItem value="Printing Expenese">Printing Expenese</SelectItem>
-                        <SelectItem value="Office Expenses">Office Expenses</SelectItem>
-                        <SelectItem value="Office Rent Advance">Office Rent Advance</SelectItem>
-                        <SelectItem value="Office Stationery">Office Stationery</SelectItem>
-                        <SelectItem value="Legal Advisor">Legal Advisor</SelectItem>
-                        <SelectItem value="Tea Expenses">Tea Expenses</SelectItem>
-                        <SelectItem value="Office Equipments">Office Equipments</SelectItem>
-                        <SelectItem value="Furniture">Furniture</SelectItem>
-                        <SelectItem value="Islamic Book Purchased">Islamic Book Purchased</SelectItem>
-                        <SelectItem value="Delivery Charges">Delivery Charges</SelectItem>
-                        <SelectItem value="Bank Charges">Bank Charges</SelectItem>
-                        <SelectItem value="Office Rent">Office Rent</SelectItem>
-                        <SelectItem value="Electricity">Electricity</SelectItem>
-                        <SelectItem value="Telephone & Internet Bills">Telephone & Internet Bills</SelectItem>
-                        <SelectItem value="Events Expenses">Events Expenses</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Expense Ledger</FormLabel>
+                    <FormControl>
+                      <JournalAccountPicker
+                        accounts={expenseAccounts}
+                        ledgerHint="expense"
+                        placeholder="e.g. Office Rent, Staff Salaries"
+                        value={expenseLedger}
+                        onChange={(value) => {
+                          setExpenseLedger(value);
+                          field.onChange(value.accountLabel);
+                          if (value.accountId) {
+                            const acc = expenseAccounts.find(
+                              (a) => a.id === value.accountId
+                            );
+                            if (acc) applyExpenseAccount(acc);
+                          } else {
+                            form.setValue("category", "", { shouldValidate: false });
+                            form.setValue("accountType", "", { shouldValidate: false });
+                          }
+                        }}
+                        onAccountCreated={(account) => {
+                          setAccounts((prev) =>
+                            prev.some((a) => a.id === account.id)
+                              ? prev
+                              : [...prev, account]
+                          );
+                          applyExpenseAccount(account);
+                        }}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Type a new expense ledger or pick from the chart of accounts.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -199,45 +309,12 @@ export function PaymentForm({ initialData }: PaymentFormProps) {
               <FormField
                 control={form.control}
                 name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Account Category</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Indirect Expenses">Indirect Expenses</SelectItem>
-                        <SelectItem value="Deposits (Assets)">Deposits (Assets)</SelectItem>
-                        <SelectItem value="Fixed Assets">Fixed Assets</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => <input type="hidden" {...field} />}
               />
               <FormField
                 control={form.control}
                 name="accountType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Account Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select account type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Revenue Exp">Revenue Exp</SelectItem>
-                        <SelectItem value="Other Exp">Other Exp</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => <input type="hidden" {...field} />}
               />
             </CardContent>
           </Card>
@@ -288,19 +365,34 @@ export function PaymentForm({ initialData }: PaymentFormProps) {
                 name="accountId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Pay From (Account Head)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select account" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {accounts.map((acc) => (
-                          <SelectItem key={acc.id} value={acc.id}>{acc.accountType || acc.type}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>Pay From (Cash / Bank)</FormLabel>
+                    <FormControl>
+                      <JournalAccountPicker
+                        accounts={assetAccounts}
+                        ledgerHint="asset"
+                        placeholder="e.g. Cash In Hand, City Union Bank"
+                        value={payFromAccount}
+                        onChange={(value) => {
+                          setPayFromAccount(value);
+                          field.onChange(value.accountId);
+                        }}
+                        onAccountCreated={(account) => {
+                          setAccounts((prev) =>
+                            prev.some((a) => a.id === account.id)
+                              ? prev
+                              : [...prev, account]
+                          );
+                          setPayFromAccount({
+                            accountId: account.id,
+                            accountLabel: formatAccountFullLabel(account),
+                          });
+                          field.onChange(account.id);
+                        }}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Type a new cash/bank ledger or select an existing one.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -6,14 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { PeriodDatePicker } from "@/components/shared/PeriodDatePicker";
 
 interface StatementDetail {
   name: string;
@@ -22,7 +16,7 @@ interface StatementDetail {
 
 interface StatementSection {
   total: number;
-  details: any[]; // Changed to any[] to accommodate varying data structures
+  details: any[];
 }
 
 interface StatementData {
@@ -51,29 +45,33 @@ const initialStatementData: StatementData = {
   totalPayments: 0,
 };
 
-const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-
 const currentYear = new Date().getFullYear();
-const YEARS = Array.from({ length: 11 }, (_, i) => String(currentYear - 10 + i));
+
+const YEAR_PRESETS = [currentYear, currentYear - 1, 2017, 2018, 2019, 2020].filter(
+  (y, i, arr) => arr.indexOf(y) === i && y >= 1990
+);
 
 export default function ReceiptsPaymentsStatementPage() {
   const [statement, setStatement] = useState<StatementData>(initialStatementData);
   const [isLoading, setIsLoading] = useState(true);
-  const [fromMonth, setFromMonth] = useState("1");
-  const [fromYear, setFromYear] = useState(String(currentYear));
-  const [toMonth, setToMonth] = useState(String(new Date().getMonth() + 1));
-  const [toYear, setToYear] = useState(String(currentYear));
+  const [fromDate, setFromDate] = useState(() => new Date(currentYear, 0, 1));
+  const [toDate, setToDate] = useState(() => new Date());
 
-  const startDate = useMemo(() => new Date(Number(fromYear), Number(fromMonth) - 1, 1), [fromMonth, fromYear]);
-  const endDate = useMemo(() => new Date(Number(toYear), Number(toMonth), 0), [toMonth, toYear]);
+  const startDateStr = useMemo(
+    () => format(fromDate, "yyyy-MM-dd"),
+    [fromDate]
+  );
+  const endDateStr = useMemo(() => format(toDate, "yyyy-MM-dd"), [toDate]);
+
+  const applyYearPreset = (year: number) => {
+    setFromDate(new Date(year, 0, 1));
+    setToDate(new Date(year, 11, 31));
+  };
 
   const loadStatement = async () => {
     setIsLoading(true);
     try {
-      const result = await getReceiptPaymentStatement(
-        format(startDate, "yyyy-MM-dd"),
-        format(endDate, "yyyy-MM-dd")
-      );
+      const result = await getReceiptPaymentStatement(startDateStr, endDateStr);
       setStatement(result);
     } catch (error) {
       console.error("Failed to fetch statement:", error);
@@ -83,8 +81,9 @@ export default function ReceiptsPaymentsStatementPage() {
   };
 
   useEffect(() => {
+    if (fromDate > toDate) return;
     loadStatement();
-  }, [startDate, endDate]);
+  }, [startDateStr, endDateStr]);
 
   const renderSection = (section: StatementSection, isReceipt: boolean = true, level: number = 0) => (
     <div className={`space-y-1 ${
@@ -104,71 +103,47 @@ export default function ReceiptsPaymentsStatementPage() {
 
   return (
     <div className="space-y-6 p-4 md:p-8">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Receipts & Payments Statement</h2>
           <p className="text-muted-foreground">
             A summary of cash and bank movements for a selected period.
           </p>
         </div>
-        <div className="flex items-end gap-4">
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">From</Label>
-            <div className="flex gap-1">
-              <Select value={fromMonth} onValueChange={setFromMonth}>
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MONTHS.map((m, i) => (
-                    <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={fromYear} onValueChange={setFromYear}>
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {YEARS.map(y => (
-                    <SelectItem key={y} value={y}>{y}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <div className="flex flex-col gap-3 min-w-0">
+          <div className="flex flex-wrap items-end gap-4">
+            <PeriodDatePicker label="From" value={fromDate} onChange={setFromDate} />
+            <PeriodDatePicker label="To" value={toDate} onChange={setToDate} />
           </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">To</Label>
-            <div className="flex gap-1">
-              <Select value={toMonth} onValueChange={setToMonth}>
-                <SelectTrigger className="w-[130px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MONTHS.map((m, i) => (
-                    <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={toYear} onValueChange={setToYear}>
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {YEARS.map(y => (
-                    <SelectItem key={y} value={y}>{y}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-muted-foreground shrink-0">Quick year:</span>
+            {YEAR_PRESETS.map((year) => (
+              <Button
+                key={year}
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 px-2.5 text-xs"
+                onClick={() => applyYearPreset(year)}
+              >
+                {year}
+              </Button>
+            ))}
           </div>
+          {fromDate > toDate && (
+            <p className="text-xs text-destructive">
+              &quot;From&quot; date must be on or before &quot;To&quot; date.
+            </p>
+          )}
         </div>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Aqaba Trust</CardTitle>
-          <p className="text-sm text-muted-foreground">Annual Receipts & Payments Statement</p>
+          <p className="text-sm text-muted-foreground">
+            Period: {format(fromDate, "dd MMM yyyy")} — {format(toDate, "dd MMM yyyy")}
+          </p>
           <Badge variant="outline" className="ml-auto bg-green-100 text-green-700 border-green-200">
             Status: Reconciled
           </Badge>
@@ -178,7 +153,6 @@ export default function ReceiptsPaymentsStatementPage() {
             <div className="text-center py-10">Loading statement...</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Receipts Section */}
               <div>
                 <h3 className="text-xl font-bold mb-4 border-b pb-2">RECEIPTS</h3>
                 <div className="space-y-4">
@@ -200,7 +174,6 @@ export default function ReceiptsPaymentsStatementPage() {
                 </div>
               </div>
 
-              {/* Payments Section */}
               <div>
                 <h3 className="text-xl font-bold mb-4 border-b pb-2">PAYMENTS</h3>
                 <div className="space-y-4">
@@ -238,7 +211,6 @@ export default function ReceiptsPaymentsStatementPage() {
                 </div>
               </div>
 
-              {/* Totals Section */}
               <div className="col-span-2 flex justify-between bg-gray-100 p-4 font-bold text-lg mt-8">
                 <div className="flex-1 text-center">
                   <span className="mr-2">TOTAL RECEIPTS</span>

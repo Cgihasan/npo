@@ -3,6 +3,11 @@
 import db from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import {
+  postPaymentLedgerEntries,
+  replacePaymentLedgerEntries,
+  resolveExpenseAccountId,
+} from "@/lib/voucher-ledger";
 
 export async function createPayment(data: any) {
   const session = await auth();
@@ -64,15 +69,18 @@ export async function createPayment(data: any) {
       },
     });
 
-    await tx.transaction.create({
-      data: {
-        accountId,
-        debit: 0,
-        credit: numAmount,
-        refType: "PAYMENT",
-        refId: payment.id,
-        date: paymentDate,
-      },
+    const expenseAccountId = await resolveExpenseAccountId(tx, {
+      type,
+      category,
+      accountType,
+    });
+
+    await postPaymentLedgerEntries(tx, {
+      paymentId: payment.id,
+      date: paymentDate,
+      amount: numAmount,
+      assetAccountId: accountId,
+      expenseAccountId,
     });
 
     return payment;
@@ -80,6 +88,7 @@ export async function createPayment(data: any) {
 
   revalidatePath("/payments");
   revalidatePath("/dashboard");
+  revalidatePath("/reports");
   return result;
 }
 
@@ -148,16 +157,18 @@ export async function updatePayment(id: string, data: any) {
       },
     });
 
-    await tx.transaction.updateMany({
-      where: {
-        refId: id,
-        refType: "PAYMENT",
-      },
-      data: {
-        accountId,
-        credit: numAmount,
-        date: paymentDate,
-      },
+    const expenseAccountId = await resolveExpenseAccountId(tx, {
+      type,
+      category,
+      accountType,
+    });
+
+    await replacePaymentLedgerEntries(tx, {
+      paymentId: id,
+      date: paymentDate,
+      amount: numAmount,
+      assetAccountId: accountId,
+      expenseAccountId,
     });
 
     return payment;
@@ -165,6 +176,7 @@ export async function updatePayment(id: string, data: any) {
 
   revalidatePath("/payments");
   revalidatePath("/dashboard");
+  revalidatePath("/reports");
   return result;
 }
 
