@@ -2,9 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { getTransactions } from "@/app/actions/reports";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const typeConfig: Record<string, { icon: string; color: string }> = {
+  RECEIPT: { icon: "arrow_downward", color: "text-emerald-500 bg-emerald-500/10" },
+  PAYMENT: { icon: "arrow_upward", color: "text-amber-500 bg-amber-500/10" },
+  CONTRA: { icon: "swap_horiz", color: "text-blue-500 bg-blue-500/10" },
+  JOURNAL: { icon: "description", color: "text-indigo-500 bg-indigo-500/10" },
+};
 
 export function RecentTransactions() {
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -26,53 +32,52 @@ export function RecentTransactions() {
 
   if (isLoading) {
     return (
-      <div className="space-y-8">
+      <div className="p-3 space-y-3">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="flex items-center">
-            <Skeleton className="h-9 w-9 rounded-full" />
-            <div className="ml-4 space-y-1">
-              <Skeleton className="h-4 w-[100px]" />
-              <Skeleton className="h-3 w-[60px]" />
+          <div key={i} className="flex items-center gap-4 p-3">
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <div className="space-y-1 flex-1">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-20" />
             </div>
-            <Skeleton className="ml-auto h-4 w-[60px]" />
+            <Skeleton className="h-4 w-16" />
           </div>
         ))}
       </div>
     );
   }
+
   return (
-    <div className="space-y-8">
+    <div className="p-3">
       {transactions.map((tx, index) => {
-        const isReceipt = "receiptNo" in tx;
-        const isPayment = "voucherNo" in tx;
-        const isContra = "entryNo" in tx;
+        const config = typeConfig[tx.refType] || { icon: "circle", color: "text-muted-foreground bg-muted" };
+        const isReceipt = tx.refType === "RECEIPT";
+        const amount = isReceipt ? `+₹${Number(tx.amount || 0).toLocaleString()}` : `-₹${Number(tx.amount || 0).toLocaleString()}`;
+        const amountColor = isReceipt ? "text-emerald-500" : "text-foreground";
 
-        const name = isReceipt 
-          ? tx.donor?.name 
-          : isPayment 
-            ? tx.vendor?.name 
-            : tx.transferType === "CASH_TO_BANK" ? "Cash to Bank" : "Bank to Cash";
-
-        const safeName = name || "N/A";
-        const amountPrefix = isReceipt ? "+" : isPayment ? "-" : "";
-        const amountColor = isReceipt ? "text-emerald-500" : isPayment ? "text-amber-500" : "text-blue-500";
-        
         return (
-          <div key={tx.id || index} className="flex items-center">
-            <Avatar className="h-9 w-9">
-              <AvatarFallback className={isReceipt ? "bg-emerald-100 text-emerald-700" : isPayment ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"}>
-                {safeName.substring(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div className="ml-4 space-y-1">
-              <p className="text-sm font-medium leading-none">{safeName}</p>
+          <div
+            key={tx.id || index}
+            className="flex items-center gap-4 p-3 rounded-xl hover:bg-accent/30 transition-colors cursor-pointer border border-transparent hover:border-border/50 mb-1"
+          >
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${config.color}`}>
+              <span className="text-sm font-bold">{tx.refType?.charAt(0) || "?"}</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">
+                {tx.refType === "CONTRA"
+                  ? "Contra Entry"
+                  : tx.narration && tx.narration !== "-"
+                    ? tx.narration
+                    : `${tx.refType} Transaction`}
+              </p>
               <p className="text-xs text-muted-foreground">
-                {isReceipt ? "Receipt" : isPayment ? "Payment" : "Contra"} • {format(new Date(tx.date), "dd/MM/yyyy")}
+                {tx.refType} • {format(new Date(tx.date), "dd/MM/yyyy")}
               </p>
             </div>
-            <div className={`ml-auto font-medium ${amountColor}`}>
-              {amountPrefix}₹{Number(tx.amount || 0).toLocaleString()}
-            </div>
+            <span className={`text-sm font-semibold whitespace-nowrap ${amountColor}`}>
+              {amount}
+            </span>
           </div>
         );
       })}

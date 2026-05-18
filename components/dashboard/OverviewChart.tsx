@@ -24,32 +24,57 @@ export function OverviewChart() {
   }, []);
 
   if (isLoading) {
-    return <Skeleton className="h-[350px] w-full" />;
+    return <Skeleton className="h-[300px] w-full" />;
   }
+
   return (
-    <ResponsiveContainer width="100%" height={350}>
-      <BarChart data={data}>
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart data={data} barGap={4}>
         <XAxis
           dataKey="name"
-          stroke="#888888"
+          stroke="currentColor"
+          strokeOpacity={0.3}
           fontSize={12}
           tickLine={false}
           axisLine={false}
         />
         <YAxis
-          stroke="#888888"
+          stroke="currentColor"
+          strokeOpacity={0.3}
           fontSize={12}
           tickLine={false}
           axisLine={false}
           tickFormatter={(value) => `₹${value}`}
         />
-        <Tooltip 
-          contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '8px' }}
-          itemStyle={{ fontSize: '12px' }}
+        <Tooltip
+          contentStyle={{
+            backgroundColor: "hsl(var(--popover))",
+            border: "1px solid hsl(var(--border))",
+            borderRadius: "12px",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+          }}
+          labelStyle={{ fontWeight: 600, marginBottom: 4 }}
+          itemStyle={{ fontSize: 13 }}
         />
-        <Legend />
-        <Bar dataKey="total" name="Income" fill="currentColor" radius={[4, 4, 0, 0]} className="fill-emerald-500" />
-        <Bar dataKey="expense" name="Expense" fill="currentColor" radius={[4, 4, 0, 0]} className="fill-amber-500" />
+        <Legend
+          formatter={(value) => <span className="text-sm font-medium">{value}</span>}
+        />
+        <Bar
+          dataKey="total"
+          name="Income"
+          fill="currentColor"
+          radius={[6, 6, 0, 0]}
+          className="fill-emerald-500"
+          maxBarSize={40}
+        />
+        <Bar
+          dataKey="expense"
+          name="Expense"
+          fill="currentColor"
+          radius={[6, 6, 0, 0]}
+          className="fill-amber-500"
+          maxBarSize={40}
+        />
       </BarChart>
     </ResponsiveContainer>
   );

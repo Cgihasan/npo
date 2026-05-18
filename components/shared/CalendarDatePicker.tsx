@@ -30,7 +30,7 @@ export function CalendarDatePicker({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1 w-full">
       {label ? (
         <p className="text-xs text-muted-foreground">{label}</p>
       ) : null}
@@ -39,27 +39,25 @@ export function CalendarDatePicker({
           <Button
             variant="outline"
             className={cn(
-              "w-[280px] justify-start text-left font-normal",
+              "w-full sm:w-[280px] justify-start text-left font-normal",
               !value && "text-muted-foreground"
             )}
           >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {value ? format(value, "dd MMM yyyy") : "Pick a date"}
+            <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+            <span className="truncate">{value ? format(value, "dd MMM yyyy") : "Pick a date"}</span>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
           <Calendar
             mode="single"
             selected={value}
+            defaultMonth={value}
             onSelect={(date) => {
               if (date) {
                 onChange(date);
                 setOpen(false);
               }
             }}
-            captionLayout="dropdown"
-            startMonth={new Date(fromYear, 0, 1)}
-            endMonth={new Date(toYear, 11, 31)}
             autoFocus
           />
         </PopoverContent>

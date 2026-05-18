@@ -178,7 +178,7 @@ export default function PaymentsPage() {
         </div>
       </div>
 
-      <div className="rounded-md border bg-card shadow-sm">
+      <div className="rounded-md border bg-card shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -187,17 +187,18 @@ export default function PaymentsPage() {
               <TableHead>Type</TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Narration</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-10">Loading payments...</TableCell>
+                <TableCell colSpan={7} className="text-center py-10">Loading payments...</TableCell>
               </TableRow>
             ) : filteredPayments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">No payments found matching the filters.</TableCell>
+                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No payments found matching the filters.</TableCell>
               </TableRow>
             ) : (
               filteredPayments.map((payment) => (
@@ -213,6 +214,7 @@ export default function PaymentsPage() {
                       Paid
                     </Badge>
                   </TableCell>
+                  <TableCell className="max-w-[200px] truncate">{payment.narration || "—"}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

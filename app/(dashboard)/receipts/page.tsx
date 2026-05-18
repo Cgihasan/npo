@@ -122,7 +122,8 @@ export default function ReceiptsPage() {
   const filteredReceipts = receipts.filter((receipt) => {
     const matchesSearch = 
       receipt.receiptNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      receipt.donor?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+      receipt.donor?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      receipt.narration?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesDate = !dateFilter || receipt.date.startsWith(dateFilter);
     const matchesType = typeFilter === "all" || receipt.type === typeFilter;
@@ -220,17 +221,18 @@ export default function ReceiptsPage() {
               <TableHead>Type</TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Mode</TableHead>
+              <TableHead>Narration</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-10">Loading receipts...</TableCell>
+                <TableCell colSpan={9} className="text-center py-10">Loading receipts...</TableCell>
               </TableRow>
             ) : filteredReceipts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">No receipts found matching the filters.</TableCell>
+                <TableCell colSpan={9} className="text-center py-10 text-muted-foreground">No receipts found matching the filters.</TableCell>
               </TableRow>
             ) : (
               filteredReceipts.map((receipt) => (
@@ -255,6 +257,7 @@ export default function ReceiptsPage() {
                   </TableCell>
                   <TableCell className="font-bold">₹{Number(receipt.amount).toLocaleString()}</TableCell>
                   <TableCell>{receipt.paymentMode}</TableCell>
+                  <TableCell className="max-w-[200px] truncate">{receipt.narration || "—"}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

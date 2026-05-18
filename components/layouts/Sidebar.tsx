@@ -3,101 +3,157 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { useEffect, useState } from 'react';
-import { Home, Receipt, Wallet, Banknote, BarChart2, Settings, Users, FileText, ChevronDown, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
+import { LayoutDashboard, Receipt, Wallet, Banknote, FileText, BarChart3, Users, Settings, ChevronDown, Heart, LogOut } from 'lucide-react';
+import { signOut } from 'next-auth/react';
 
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: Home },
+const vouchersItems = [
   { href: '/receipts', label: 'Receipts', icon: Receipt },
   { href: '/payments', label: 'Payments', icon: Wallet },
   { href: '/contra', label: 'Contra', icon: Banknote },
   { href: '/journal', label: 'Journal', icon: FileText },
-  { href: '/accounts', label: 'Accounts', icon: BarChart2 },
-  { href: '/masters', label: 'Masters', icon: Users },
-  { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
 const reportItems = [
-  { href: '/reports/receipts-payments-statement', label: 'Receipts & Payments Statement' },
+  { href: '/reports/receipts-payments-statement', label: 'Receipts & Payment' },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const [mounted, setMounted] = useState(false);
-  const [reportsOpen, setReportsOpen] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-    const isReportActive = reportItems.some(item => pathname.startsWith(item.href));
-    setReportsOpen(isReportActive);
-  }, [pathname]);
-
-  const isReportActive = reportItems.some(item => pathname.startsWith(item.href));
+  const [vouchersOpen, setVouchersOpen] = useState(
+    () => vouchersItems.some(item => pathname.startsWith(item.href))
+  );
+  const [reportsOpen, setReportsOpen] = useState(
+    () => reportItems.some(item => pathname.startsWith(item.href))
+  );
 
   return (
-    <nav className="h-screen w-64 shrink-0 border-r border-sidebar-border bg-sidebar p-4">
-      <div className="flex items-center mb-8">
-        <h2 className="text-2xl font-bold text-sidebar-primary">NPO</h2>
-      </div>
-      {mounted && (
-        <ul className="flex-1 space-y-2">
-          {navItems.map(({ href, label, icon: Icon }) => (
-            <li key={href}>
-              <Link
-                href={href}
-                className={cn(
-                  "flex items-center gap-3 rounded-md p-2 text-sm font-medium",
-                  pathname === href
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-              </Link>
-            </li>
-          ))}
+    <nav className="fixed left-0 top-0 h-full w-64 flex flex-col border-r border-border bg-sidebar z-50">
+      <div className="flex flex-col h-full py-6 px-4">
+        <div className="mb-10 px-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
+            <Heart className="h-5 w-5 text-primary-foreground" fill="currentColor" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-sidebar-primary">NPO</h1>
+            <p className="text-[11px] text-sidebar-foreground/60 font-medium">Management</p>
+          </div>
+        </div>
 
-          <li>
+        <div className="flex flex-col gap-1 flex-1">
+          <Link
+            href="/dashboard"
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-150",
+              pathname === '/dashboard'
+                ? "bg-primary/10 text-primary font-semibold shadow-[inset_0_0_0_1px_rgba(16,185,129,0.15)]"
+                : "text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+            )}
+          >
+            <LayoutDashboard className="h-5 w-5" />
+            <span>Dashboard</span>
+          </Link>
+
+          {/* Vouchers */}
+          <div>
+            <button
+              onClick={() => setVouchersOpen(!vouchersOpen)}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-lg text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Receipt className="h-5 w-5" />
+                <span>Vouchers</span>
+              </div>
+              <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", vouchersOpen && "rotate-180")} />
+            </button>
+            {vouchersOpen && (
+              <div className="flex flex-col gap-1 pl-8 pr-2 mt-1">
+                {vouchersItems.map(({ href, label }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={cn(
+                      "flex items-center px-4 py-2 rounded-lg text-sm transition-colors",
+                      pathname.startsWith(href)
+                        ? "text-primary font-medium"
+                        : "text-sidebar-foreground/70 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+                    )}
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Reports */}
+          <div>
             <button
               onClick={() => setReportsOpen(!reportsOpen)}
-              className={cn(
-                "flex items-center gap-3 rounded-md p-2 text-sm font-medium w-full",
-                isReportActive
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              )}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-lg text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent transition-colors"
             >
-              <FileText className="h-4 w-4" />
-              <span className="flex-1 text-left">Reports</span>
-              {reportsOpen === true ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
+              <div className="flex items-center gap-3">
+                <BarChart3 className="h-5 w-5" />
+                <span>Reports</span>
+              </div>
+              <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", reportsOpen && "rotate-180")} />
             </button>
-            {(reportsOpen === true) && (
-              <ul className="ml-6 mt-1 space-y-1">
+            {reportsOpen && (
+              <div className="flex flex-col gap-1 pl-8 pr-2 mt-1">
                 {reportItems.map(({ href, label }) => (
-                  <li key={href}>
-                    <Link
-                      href={href}
-                      className={cn(
-                        "flex items-center gap-3 rounded-md p-2 text-sm",
-                        pathname === href
-                          ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                      )}
-                    >
-                      {label}
-                    </Link>
-                  </li>
+                  <Link
+                    key={href}
+                    href={href}
+                    className={cn(
+                      "flex items-center px-4 py-2 rounded-lg text-sm transition-colors",
+                      pathname.startsWith(href)
+                        ? "text-primary font-medium"
+                        : "text-sidebar-foreground/70 hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+                    )}
+                  >
+                    {label}
+                  </Link>
                 ))}
-              </ul>
+              </div>
             )}
-          </li>
-        </ul>
-      )}
+          </div>
+
+          <Link
+            href="/masters"
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
+              pathname === '/masters'
+                ? "bg-primary/10 text-primary font-semibold"
+                : "text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+            )}
+          >
+            <Users className="h-5 w-5" />
+            <span>Masters</span>
+          </Link>
+        </div>
+
+        <div className="mt-auto space-y-1">
+          <Link
+            href="/settings"
+            className={cn(
+              "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
+              pathname === '/settings'
+                ? "bg-primary/10 text-primary font-semibold"
+                : "text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+            )}
+          >
+            <Settings className="h-5 w-5" />
+            <span>Settings</span>
+          </Link>
+          <button
+            onClick={() => signOut()}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            <LogOut className="h-5 w-5" />
+            <span>Logout</span>
+          </button>
+        </div>
+      </div>
     </nav>
   );
 }

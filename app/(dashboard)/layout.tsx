@@ -15,11 +15,11 @@ export default async function DashboardLayout({
     redirect("/login");
   }
   return (
-    <div className="flex h-screen bg-background text-foreground" suppressHydrationWarning>
+    <div className="min-h-screen bg-background text-foreground" suppressHydrationWarning>
       <Sidebar />
-      <div className="flex flex-col flex-1">
+      <div className="ml-64 flex flex-col min-h-screen">
         <Navbar user={session.user} />
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto">
           <PageTransition>{children}</PageTransition>
         </main>
       </div>
