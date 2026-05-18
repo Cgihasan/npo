@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import * as React from "react";
+
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { Field, FieldLabel } from "@/components/ui/field";
 import {
   Popover,
   PopoverContent,
@@ -15,53 +14,43 @@ import {
 interface CalendarDatePickerProps {
   value: Date;
   onChange: (date: Date) => void;
-  label?: string;
-  fromYear?: number;
-  toYear?: number;
+  label: string;
 }
 
 export function CalendarDatePicker({
   value,
   onChange,
   label,
-  fromYear = 1990,
-  toYear = new Date().getFullYear(),
 }: CalendarDatePickerProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = React.useState(false);
 
   return (
-    <div className="space-y-1 w-full">
-      {label ? (
-        <p className="text-xs text-muted-foreground">{label}</p>
-      ) : null}
+    <Field>
+      <FieldLabel>{label}</FieldLabel>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            className={cn(
-              "w-full sm:w-[280px] justify-start text-left font-normal",
-              !value && "text-muted-foreground"
-            )}
+            className="justify-start font-normal w-[280px]"
           >
-            <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
-            <span className="truncate">{value ? format(value, "dd MMM yyyy") : "Pick a date"}</span>
+            {value ? value.toLocaleDateString() : "Select date"}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+        <PopoverContent className="w-[280px] overflow-hidden p-0" align="start">
           <Calendar
             mode="single"
             selected={value}
             defaultMonth={value}
+            captionLayout="dropdown"
             onSelect={(date) => {
               if (date) {
                 onChange(date);
                 setOpen(false);
               }
             }}
-            autoFocus
           />
         </PopoverContent>
       </Popover>
-    </div>
+    </Field>
   );
 }

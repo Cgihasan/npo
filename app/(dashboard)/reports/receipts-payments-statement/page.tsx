@@ -77,19 +77,17 @@ export default function ReceiptsPaymentsStatementPage() {
   }, [startDateStr, endDateStr]);
 
   return (
-    <div className="space-y-6 p-4 md:p-8">
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+    <div className="space-y-2 p-4 md:p-8">
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-2">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Receipts & Payments Statement</h2>
           <p className="text-muted-foreground">
             A summary of cash and bank movements for a selected period.
           </p>
         </div>
-        <div className="flex flex-col gap-3 min-w-0 items-end w-full sm:w-auto">
-          <div className="flex flex-col gap-3 items-end w-full sm:w-auto">
-            <CalendarDatePicker label="From" value={fromDate} onChange={setFromDate} />
-            <CalendarDatePicker label="To" value={toDate} onChange={setToDate} />
-          </div>
+        <div className="flex flex-col items-end gap-3 shrink-0">
+          <CalendarDatePicker label="From" value={fromDate} onChange={setFromDate} />
+          <CalendarDatePicker label="To" value={toDate} onChange={setToDate} />
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground shrink-0">FY:</span>
             <Input
