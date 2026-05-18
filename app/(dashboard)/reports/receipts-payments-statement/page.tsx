@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getReceiptPaymentStatement } from "@/app/actions/reports";
 import { format } from "date-fns";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { CalendarDatePicker } from "@/components/shared/CalendarDatePicker";
 import { ReceiptPaymentStatement } from "@/components/reports/ReceiptPaymentStatement";
 
@@ -54,11 +53,6 @@ export default function ReceiptsPaymentsStatementPage() {
   );
   const endDateStr = useMemo(() => format(toDate, "yyyy-MM-dd"), [toDate]);
 
-  const applyYearPreset = (year: number) => {
-    setFromDate(new Date(year, 3, 1));
-    setToDate(new Date(year + 1, 2, 31));
-  };
-
   const loadStatement = async () => {
     setIsLoading(true);
     try {
@@ -88,22 +82,6 @@ export default function ReceiptsPaymentsStatementPage() {
         <div className="flex flex-col items-end gap-3 shrink-0">
           <CalendarDatePicker label="From" value={fromDate} onChange={setFromDate} />
           <CalendarDatePicker label="To" value={toDate} onChange={setToDate} />
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground shrink-0">FY:</span>
-            <Input
-              type="number"
-              min={1990}
-              max={2100}
-              value={fromDate.getFullYear()}
-              onChange={(e) => {
-                const y = parseInt(e.target.value);
-                if (y && y >= 1990 && y <= 2100) {
-                  applyYearPreset(y);
-                }
-              }}
-              className="h-7 w-20 text-xs px-2 text-center"
-            />
-          </div>
           {fromDate > toDate && (
             <p className="text-xs text-destructive text-right w-full">
               &quot;From&quot; date must be on or before &quot;To&quot; date.

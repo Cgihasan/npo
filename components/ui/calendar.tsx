@@ -27,7 +27,7 @@ function Calendar({
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn(
-        "bg-background p-3 w-full [--cell-size:2.25rem]",
+        "bg-background p-3 w-full [--cell-size:2rem]",
         className
       )}
       captionLayout={captionLayout}
