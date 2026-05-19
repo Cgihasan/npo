@@ -7,9 +7,20 @@ import { format } from "date-fns";
 import { CalendarDatePicker } from "@/components/shared/CalendarDatePicker";
 import { ReceiptPaymentStatement } from "@/components/reports/ReceiptPaymentStatement";
 
+interface DonorDetail {
+  name: string;
+  amount: number;
+}
+
+interface StatementDetail {
+  name: string;
+  value: number;
+  donors?: DonorDetail[];
+}
+
 interface StatementSection {
   total: number;
-  details: { name: string; value: number }[];
+  details: StatementDetail[];
 }
 
 interface StatementData {

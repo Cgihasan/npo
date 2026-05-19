@@ -273,17 +273,29 @@ export async function getReceiptPaymentStatement(startDate: string, endDate: str
   // 2. Direct Incomes from Receipts table grouped by accountType
   const receipts = await db.receipt.findMany({
     where: { date: { gte: start, lte: end } },
-    select: { amount: true, accountType: true, category: true },
+    select: { amount: true, accountType: true, category: true, donor: { select: { name: true } } },
   });
 
-  const directIncomesMap = new Map<string, number>();
+  // Map: accountType -> { total amount, donors array }
+  const directIncomesMap = new Map<string, { total: number; donors: Map<string, number> }>();
   receipts.forEach(r => {
     const label = r.accountType || r.category || "Other Income";
-    const current = directIncomesMap.get(label) || 0;
-    directIncomesMap.set(label, current + r.amount);
+    if (!directIncomesMap.has(label)) {
+      directIncomesMap.set(label, { total: 0, donors: new Map() });
+    }
+    const entry = directIncomesMap.get(label)!;
+    entry.total += r.amount;
+    if (r.donor?.name) {
+      const donorCurrent = entry.donors.get(r.donor.name) || 0;
+      entry.donors.set(r.donor.name, donorCurrent + r.amount);
+    }
   });
 
-  const directIncomes = Array.from(directIncomesMap.entries()).map(([name, amount]) => ({ name, value: amount }));
+  const directIncomes = Array.from(directIncomesMap.entries()).map(([name, data]) => ({
+    name,
+    value: data.total,
+    donors: Array.from(data.donors.entries()).map(([donorName, amount]) => ({ name: donorName, amount })),
+  }));
   const totalDirectIncomes = directIncomes.reduce((sum, item) => sum + item.value, 0);
 
   // 3. Payments from Payments table grouped by category

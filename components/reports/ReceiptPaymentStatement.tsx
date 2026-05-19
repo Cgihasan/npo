@@ -1,11 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+
+interface DonorDetail {
+  name: string;
+  amount: number;
+}
 
 interface StatementDetail {
   name: string;
   value: number;
+  donors?: DonorDetail[];
 }
 
 interface StatementSection {
@@ -45,6 +52,20 @@ function StatementCategory({
   accentColor: string;
   totalColor: string;
 }) {
+  const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
+
+  const toggleExpand = (index: number) => {
+    setExpandedItems(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
+  };
+
   return (
     <div>
       <div className="flex justify-between items-end mb-3 border-b border-border/50 pb-2">
@@ -54,13 +75,45 @@ function StatementCategory({
         </span>
       </div>
       {details.length > 0 && (
-        <div className="space-y-2 pl-4">
+        <div className="space-y-1 pl-4">
           {details.map((item, index) => (
-            <div key={index} className="flex justify-between items-center text-sm">
-              <span className="text-muted-foreground">{item.name}</span>
-              <span className={cn("font-medium", item.value ? totalColor : "text-muted-foreground")}>
-                {item.value ? `₹${item.value.toLocaleString()}` : "-"}
-              </span>
+            <div key={index}>
+              <div className="flex justify-between items-center text-sm group">
+                <span className="flex items-center gap-2">
+                  {item.donors && item.donors.length > 0 && (
+                    <button
+                      onClick={() => toggleExpand(index)}
+                      className={cn(
+                        "w-5 h-5 flex items-center justify-center rounded-md text-xs font-bold transition-all duration-200",
+                        expandedItems.has(index)
+                          ? "bg-sky-100 text-sky-700 dark:bg-sky-900 dark:text-sky-300"
+                          : "bg-muted/50 text-muted-foreground hover:bg-sky-100 hover:text-sky-600 dark:hover:bg-sky-900 dark:hover:text-sky-400"
+                      )}
+                    >
+                      {expandedItems.has(index) ? "−" : "+"}
+                    </button>
+                  )}
+                  <span className="text-muted-foreground">{item.name}</span>
+                </span>
+                <span className={cn("font-medium", item.value ? totalColor : "text-muted-foreground")}>
+                  {item.value ? `₹${item.value.toLocaleString()}` : "-"}
+                </span>
+              </div>
+              {item.donors && item.donors.length > 0 && expandedItems.has(index) && (
+                <div className="ml-8 mt-1 mb-2 space-y-0.5 border-l-2 border-sky-200 dark:border-sky-800 pl-3">
+                  {item.donors.map((donor, dIdx) => (
+                    <div
+                      key={dIdx}
+                      className="flex justify-between items-center text-xs py-0.5"
+                    >
+                      <span className="text-muted-foreground/80">{donor.name}</span>
+                      <span className={cn("font-medium", totalColor)}>
+                        ₹{donor.amount.toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
