@@ -36,6 +36,18 @@ export default function ReportsPage() {
     );
   });
 
+  const uniqueRefIds = Array.from(new Set(filtered.map((tx: any) => tx.refId)));
+  const refIdToSerial = new Map<string, number>();
+  uniqueRefIds.forEach((id, index) => {
+    refIdToSerial.set(id, index + 1);
+  });
+  const uniqueCount = uniqueRefIds.length;
+
+  const refIdCounts = new Map<string, number>();
+  filtered.forEach((tx: any) => {
+    refIdCounts.set(tx.refId, (refIdCounts.get(tx.refId) || 0) + 1);
+  });
+
   return (
     <div className="space-y-8 p-8">
       <div>
@@ -57,12 +69,13 @@ export default function ReportsPage() {
       <div className="rounded-2xl border border-border/50 bg-card/60 backdrop-blur-sm overflow-hidden shadow-sm">
         <div className="p-4 border-b border-border/50 flex items-center justify-between">
           <h3 className="font-semibold">All Transactions</h3>
-          <span className="text-xs text-muted-foreground">{filtered.length} entries</span>
+          <span className="text-xs text-muted-foreground">{uniqueCount} entries</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border/50 text-muted-foreground text-[11px] uppercase tracking-widest">
+                <th className="px-6 py-4 text-left font-semibold w-16">S.No.</th>
                 <th className="px-6 py-4 text-left font-semibold">
                   <div className="flex items-center gap-1">
                     Date <ArrowUpDown className="h-3 w-3" />
@@ -78,21 +91,32 @@ export default function ReportsPage() {
             <tbody className="divide-y divide-border/30">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-16">
+                  <td colSpan={7} className="text-center py-16">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-16 text-muted-foreground">No transactions found.</td>
+                  <td colSpan={7} className="text-center py-16 text-muted-foreground">No transactions found.</td>
                 </tr>
               ) : (
-                filtered.map((tx: any) => (
-                  <tr key={tx.id} className="hover:bg-accent/30 transition-colors">
-                    <td className="px-6 py-4 font-mono text-xs">
-                      {format(new Date(tx.date), "dd/MM/yyyy")}
-                    </td>
-                    <td className="px-6 py-4 font-medium">{tx.account?.name || tx.account?.type || "-"}</td>
+                filtered.map((tx: any, index: number) => {
+                  const isFirst = filtered.findIndex((t: any) => t.refId === tx.refId) === index;
+                  const rowSpan = refIdCounts.get(tx.refId) || 1;
+
+                  return (
+                    <tr key={tx.id} className="hover:bg-accent/30 transition-colors">
+                      {isFirst && (
+                        <>
+                          <td rowSpan={rowSpan} className="px-6 py-4 font-mono text-xs text-muted-foreground bg-card/40 align-middle">
+                            {refIdToSerial.get(tx.refId)}
+                          </td>
+                          <td rowSpan={rowSpan} className="px-6 py-4 font-mono text-xs bg-card/40 align-middle">
+                            {format(new Date(tx.date), "dd/MM/yyyy")}
+                          </td>
+                        </>
+                      )}
+                      <td className="px-6 py-4 font-medium">{tx.account?.name || tx.account?.type || "-"}</td>
                     <td className="px-6 py-4">
                       <Badge
                         variant="outline"
@@ -111,8 +135,9 @@ export default function ReportsPage() {
                       {tx.narration || "—"}
                     </td>
                   </tr>
-                ))
-              )}
+                );
+              })
+            )}
             </tbody>
           </table>
         </div>

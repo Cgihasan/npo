@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp, ArrowLeftRight, FileText, HelpCircle } from "lucide-react";
 import { formatRelative } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -59,6 +60,7 @@ const statusConfig: Record<string, { badgeColor: string; badgeTextColor: string 
 };
 
 export function RecentTransactions() {
+  const router = useRouter();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -124,7 +126,17 @@ export function RecentTransactions() {
         return (
           <div
             key={tx.id || index}
-            className="flex items-start gap-4 group cursor-pointer mb-6"
+            className="flex items-start gap-4 group cursor-pointer mb-6 hover:bg-slate-50/50 p-2 rounded-xl transition-colors"
+            onClick={() => {
+              const module = tx.refType === 'RECEIPT' ? 'receipts' :
+                             tx.refType === 'PAYMENT' ? 'payments' :
+                             tx.refType === 'CONTRA' ? 'contra' : 'journal';
+              if (module === 'journal') {
+                router.push(`/${module}`);
+              } else {
+                router.push(`/${module}/${tx.refId}/edit`);
+              }
+            }}
           >
             <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${config.circleColor}`}>
               <Icon className={`w-6 h-6 ${config.iconColor}`} />

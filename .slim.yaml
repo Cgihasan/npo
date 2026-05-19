@@ -1,0 +1,8 @@
+services:
+  # Next.js serves both Frontend (React) and Backend (Server Actions/Prisma) on the same port
+  - domain: npo-app
+    port: 3000
+    target_path: /
+
+log_mode: minimal
+cors: true
