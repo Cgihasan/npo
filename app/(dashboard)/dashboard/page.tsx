@@ -89,8 +89,8 @@ export default async function DashboardPage() {
 
         <div className="rounded-xl border border-border/50 bg-card/60 backdrop-blur-sm flex flex-col">
           <div className="p-4 border-b border-border/50 flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Recent Transactions</h3>
-            <a href="/reports" className="text-xs font-medium text-primary hover:underline">View All</a>
+            <h3 className="text-lg font-bold">Recent Entries</h3>
+            <a href="/reports" className="text-sm font-bold text-pink-500 hover:underline">View All</a>
           </div>
           <div className="flex-1 overflow-y-auto max-h-[400px]">
             <RecentTransactions />

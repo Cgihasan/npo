@@ -89,6 +89,69 @@ export async function createJournalVoucher(data: {
   return result;
 }
 
+export async function updateJournalVoucher(id: string, data: {
+  date: string;
+  narration: string;
+  entries: JournalEntryInput[];
+}) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+
+  const { date, narration, entries } = data;
+  const voucherDate = new Date(date);
+
+  // Validate that debits == credits
+  const totalDebit = entries.reduce((sum, entry) => sum + Number(entry.debit), 0);
+  const totalCredit = entries.reduce((sum, entry) => sum + Number(entry.credit), 0);
+
+  if (Math.abs(totalDebit - totalCredit) > 0.01) {
+    throw new Error("Total Debits must equal Total Credits");
+  }
+
+  if (totalDebit === 0) {
+    throw new Error("Journal entry cannot have zero total amount");
+  }
+
+  await db.$transaction(async (tx) => {
+    // Update the voucher
+    await tx.journalVoucher.update({
+      where: { id },
+      data: {
+        date: voucherDate,
+        narration,
+      },
+    });
+
+    // Delete existing transactions
+    await tx.transaction.deleteMany({
+      where: {
+        refId: id,
+        refType: "JOURNAL",
+      },
+    });
+
+    // Create new transactions
+    for (const entry of entries) {
+      if (Number(entry.debit) === 0 && Number(entry.credit) === 0) continue;
+
+      await tx.transaction.create({
+        data: {
+          accountId: entry.accountId,
+          debit: Number(entry.debit),
+          credit: Number(entry.credit),
+          refType: "JOURNAL",
+          refId: id,
+          date: voucherDate,
+        },
+      });
+    }
+  });
+
+  revalidatePath("/journal");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
 export async function deleteJournalVoucher(id: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");

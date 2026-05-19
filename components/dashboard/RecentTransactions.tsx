@@ -1,26 +1,75 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getTransactions } from "@/app/actions/reports";
-import { format } from "date-fns";
+import { ArrowDown, ArrowUp, ArrowLeftRight, FileText, HelpCircle } from "lucide-react";
+import { formatRelative } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getTransactions } from "@/app/actions/reports";
 
-const typeConfig: Record<string, { icon: string; color: string }> = {
-  RECEIPT: { icon: "arrow_downward", color: "text-emerald-500 bg-emerald-500/10" },
-  PAYMENT: { icon: "arrow_upward", color: "text-amber-500 bg-amber-500/10" },
-  CONTRA: { icon: "swap_horiz", color: "text-blue-500 bg-blue-500/10" },
-  JOURNAL: { icon: "description", color: "text-indigo-500 bg-indigo-500/10" },
+interface Transaction {
+  id: string;
+  refType: string;
+  amount?: number;
+  debit?: number;
+  credit?: number;
+  date: string | Date;
+  narration: string;
+  refId: string;
+  status?: string;
+}
+
+type IconComponent = React.ComponentType<{ className?: string }>;
+
+const typeConfig: Record<string, { icon: IconComponent; circleColor: string; iconColor: string; badgeColor: string; badgeTextColor: string }> = {
+  RECEIPT: {
+    icon: ArrowDown,
+    circleColor: "bg-pink-100",
+    iconColor: "text-pink-600",
+    badgeColor: "bg-pink-50",
+    badgeTextColor: "text-pink-600"
+  },
+  PAYMENT: {
+    icon: ArrowUp,
+    circleColor: "bg-purple-100",
+    iconColor: "text-purple-600",
+    badgeColor: "bg-pink-50",
+    badgeTextColor: "text-pink-600"
+  },
+  CONTRA: {
+    icon: ArrowLeftRight,
+    circleColor: "bg-purple-100",
+    iconColor: "text-purple-600",
+    badgeColor: "bg-purple-50",
+    badgeTextColor: "text-purple-600"
+  },
+  JOURNAL: {
+    icon: FileText,
+    circleColor: "bg-blue-100",
+    iconColor: "text-blue-600",
+    badgeColor: "bg-blue-50",
+    badgeTextColor: "text-blue-600"
+  },
+};
+
+const statusConfig: Record<string, { badgeColor: string; badgeTextColor: string }> = {
+  "Processing": { badgeColor: "bg-purple-100", badgeTextColor: "text-purple-700" },
+  "Reconciled": { badgeColor: "bg-pink-100", badgeTextColor: "text-pink-500" },
+  "Draft": { badgeColor: "bg-slate-100", badgeTextColor: "text-slate-600" },
+  "Default": { badgeColor: "bg-gray-100", badgeTextColor: "text-gray-600" },
 };
 
 export function RecentTransactions() {
-  const [transactions, setTransactions] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
       try {
         const data = await getTransactions();
-        setTransactions(data.slice(0, 5));
+        const uniqueData = data.filter((tx: any, index: number, self: any[]) =>
+          index === self.findIndex((t: any) => t.refId === tx.refId)
+        );
+        setTransactions(uniqueData.slice(0, 4));
       } catch (error) {
         console.error(error);
       } finally {
@@ -32,9 +81,9 @@ export function RecentTransactions() {
 
   if (isLoading) {
     return (
-      <div className="p-3 space-y-3">
+      <div className="p-4 space-y-4">
         {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="flex items-center gap-4 p-3">
+          <div key={i} className="flex items-center gap-4">
             <Skeleton className="h-10 w-10 rounded-full" />
             <div className="space-y-1 flex-1">
               <Skeleton className="h-4 w-32" />
@@ -48,36 +97,58 @@ export function RecentTransactions() {
   }
 
   return (
-    <div className="p-3">
+    <div className="p-2 space-y-4">
       {transactions.map((tx, index) => {
-        const config = typeConfig[tx.refType] || { icon: "circle", color: "text-muted-foreground bg-muted" };
+        const config = typeConfig[tx.refType] || {
+          icon: HelpCircle,
+          circleColor: "bg-gray-100",
+          iconColor: "text-gray-600",
+          badgeColor: "bg-gray-50",
+          badgeTextColor: "text-gray-600"
+        };
+        const Icon = config.icon;
         const isReceipt = tx.refType === "RECEIPT";
-        const amount = isReceipt ? `+₹${Number(tx.amount || 0).toLocaleString()}` : `-₹${Number(tx.amount || 0).toLocaleString()}`;
-        const amountColor = isReceipt ? "text-emerald-500" : "text-foreground";
+        const isPositive = isReceipt;
+        const actualAmount = tx.amount || tx.debit || tx.credit || 0;
+        const formattedAmount = Number(actualAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const amount = isPositive ? `+₹${formattedAmount}` : `-₹${formattedAmount}`;
+        const amountColor = isPositive ? "text-pink-500" : "text-slate-900";
+
+        const defaultStatus = tx.refType === 'CONTRA' ? 'Processing' : 'Reconciled';
+        const statusText = tx.status || defaultStatus;
+        const statusInfo = statusConfig[statusText] || statusConfig["Default"];
+
+        const dateStr = formatRelative(new Date(tx.date), new Date());
+        const formattedDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1).replace(' at ', ', ');
 
         return (
           <div
             key={tx.id || index}
-            className="flex items-center gap-4 p-3 rounded-xl hover:bg-accent/30 transition-colors cursor-pointer border border-transparent hover:border-border/50 mb-1"
+            className="flex items-start gap-4 group cursor-pointer mb-6"
           >
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${config.color}`}>
-              <span className="text-sm font-bold">{tx.refType?.charAt(0) || "?"}</span>
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${config.circleColor}`}>
+              <Icon className={`w-6 h-6 ${config.iconColor}`} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">
+              <p className="text-base font-medium truncate text-slate-900">
                 {tx.refType === "CONTRA"
-                  ? "Contra Entry"
+                  ? "Contra: " + (tx.narration !== "-" ? tx.narration : "Transfer")
                   : tx.narration && tx.narration !== "-"
                     ? tx.narration
                     : `${tx.refType} Transaction`}
               </p>
-              <p className="text-xs text-muted-foreground">
-                {tx.refType} • {format(new Date(tx.date), "dd/MM/yyyy")}
+              <p className="text-xs text-slate-500 mt-1">
+                TRX-{tx.id?.slice(-4).toUpperCase() || "XXXX"} • {formattedDate}
               </p>
+              <div className="flex justify-between items-center mt-3">
+                <span className={`text-[10px] font-bold px-3 py-1 rounded-full ${statusInfo.badgeColor} ${statusInfo.badgeTextColor}`}>
+                  {statusText}
+                </span>
+                <span className={`text-base font-bold whitespace-nowrap ${amountColor}`}>
+                  {amount}
+                </span>
+              </div>
             </div>
-            <span className={`text-sm font-semibold whitespace-nowrap ${amountColor}`}>
-              {amount}
-            </span>
           </div>
         );
       })}

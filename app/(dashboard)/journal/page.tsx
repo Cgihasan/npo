@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getJournalVouchers, deleteJournalVoucher } from "@/app/actions/journal";
+import { getJournalVouchers, deleteJournalVoucher, updateJournalVoucher } from "@/app/actions/journal";
 import { 
   Table, 
   TableBody, 
@@ -31,6 +31,7 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { JournalVoucherForm } from "@/components/forms/JournalVoucherForm";
 
 export default function JournalPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -39,8 +40,10 @@ export default function JournalPage() {
 
   const [selectedVoucher, setSelectedVoucher] = useState<any>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     async function loadVouchers() {
@@ -68,6 +71,23 @@ export default function JournalPage() {
       toast.error("Failed to delete journal voucher");
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleEditSubmit = async (data: any) => {
+    if (!selectedVoucher) return;
+    setIsEditing(true);
+    try {
+      await updateJournalVoucher(selectedVoucher.id, data);
+      toast.success("Journal voucher updated successfully");
+      setIsEditOpen(false);
+      // Refresh vouchers
+      const updatedVouchers = await getJournalVouchers();
+      setVouchers(updatedVouchers);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update journal voucher");
+    } finally {
+      setIsEditing(false);
     }
   };
 
@@ -143,6 +163,12 @@ export default function JournalPage() {
                         }}>
                           <FileText className="mr-2 h-4 w-4" /> View Details
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => {
+                          setSelectedVoucher(voucher);
+                          setIsEditOpen(true);
+                        }}>
+                          <Edit className="mr-2 h-4 w-4" /> Edit
+                        </DropdownMenuItem>
                         <DropdownMenuItem 
                           className="text-destructive"
                           onClick={() => {
@@ -209,6 +235,29 @@ export default function JournalPage() {
               Close
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Journal Voucher</DialogTitle>
+            <DialogDescription>
+              Modify the details of {selectedVoucher?.voucherNo}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedVoucher && (
+            <JournalVoucherForm 
+              initialData={{
+                date: format(new Date(selectedVoucher.date), "yyyy-MM-dd"),
+                narration: selectedVoucher.narration,
+                transactions: selectedVoucher.transactions
+              }}
+              onSubmit={handleEditSubmit}
+              isSubmitting={isEditing}
+              submitButtonText="Update Voucher"
+            />
+          )}
         </DialogContent>
       </Dialog>
 
