@@ -1,4 +1,5 @@
-import { PrismaClient } from "@/prisma/generated/prisma";
+import { PrismaClient } from "@prisma/client";
+import { PrismaNeon } from "@prisma/adapter-neon";
 
 declare global {
   var prisma2: PrismaClient | undefined;
@@ -6,7 +7,8 @@ declare global {
 
 function getPrisma() {
   if (!globalThis.prisma2) {
-    globalThis.prisma2 = new PrismaClient();
+    const adapter = new PrismaNeon({ connectionString: process.env.DATABASE_URL! });
+    globalThis.prisma2 = new PrismaClient({ adapter });
   }
   return globalThis.prisma2;
 }

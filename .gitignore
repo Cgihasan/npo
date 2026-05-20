@@ -40,8 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# prisma generated client
-/prisma/generated/
 
 # exported data (contains sensitive info)
 sqlite-export.json

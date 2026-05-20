@@ -1,4 +1,4 @@
-import type { Prisma } from "@/prisma/generated/prisma";
+import type { Prisma } from "@prisma/client";
 
 type Tx = Prisma.TransactionClient;
 
