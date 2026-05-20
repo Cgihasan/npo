@@ -113,7 +113,7 @@ export default function ContraPage() {
                     <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
                   </TableCell>
                   <TableCell>{entry.toAccountId}</TableCell>
-                  <TableCell className="font-bold">₹{Number(entry.amount).toLocaleString()}</TableCell>
+                  <TableCell className="font-bold">₹{Number(entry.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

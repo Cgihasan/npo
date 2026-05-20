@@ -31,43 +31,63 @@ export async function createPayment(data: any) {
   const year = paymentDate.getFullYear();
 
   const result = await db.$transaction(async (tx) => {
-    // Generate sequential voucher number
-    const lastPayment = await tx.payment.findFirst({
-      where: {
-        date: {
-          gte: new Date(`${year}-01-01`),
-          lte: new Date(`${year}-12-31T23:59:59.999Z`),
-        },
-      },
-      orderBy: { voucherNo: "desc" },
-    });
+    // Generate sequential voucher number with retry for race conditions
+    let payment;
+    let attempts = 0;
+    const maxAttempts = 5;
 
-    let nextNumber = 1;
-    if (lastPayment) {
-      const parts = lastPayment.voucherNo.split("-");
-      const lastSeq = parseInt(parts[parts.length - 1]);
-      if (!isNaN(lastSeq)) {
-        nextNumber = lastSeq + 1;
+    while (attempts < maxAttempts) {
+      const lastPayment = await tx.payment.findFirst({
+        where: {
+          date: {
+            gte: new Date(`${year}-01-01`),
+            lte: new Date(`${year}-12-31T23:59:59.999Z`),
+          },
+        },
+        orderBy: { voucherNo: "desc" },
+      });
+
+      let nextNumber = 1;
+      if (lastPayment) {
+        const parts = lastPayment.voucherNo.split("-");
+        const lastSeq = parseInt(parts[parts.length - 1]);
+        if (!isNaN(lastSeq)) {
+          nextNumber = lastSeq + 1;
+        }
+      }
+
+      // Increment by attempts to avoid collisions on retry
+      nextNumber += attempts;
+
+      const voucherNo = `PV-${year}-${nextNumber.toString().padStart(3, "0")}`;
+
+      try {
+        payment = await tx.payment.create({
+          data: {
+            voucherNo,
+            date: paymentDate,
+            type,
+            category,
+            accountType,
+            amount: numAmount,
+            paymentMode,
+            chequeNo,
+            bankName,
+            accountId,
+            narration,
+          },
+        });
+        break;
+      } catch (error: any) {
+        if (error.code === "P2002" && attempts < maxAttempts - 1) {
+          attempts++;
+          continue;
+        }
+        throw error;
       }
     }
 
-    const voucherNo = `PV-${year}-${nextNumber.toString().padStart(3, "0")}`;
-
-    const payment = await tx.payment.create({
-      data: {
-        voucherNo,
-        date: paymentDate,
-        type,
-        category,
-        accountType,
-        amount: numAmount,
-        paymentMode,
-        chequeNo,
-        bankName,
-        accountId,
-        narration,
-      },
-    });
+    if (!payment) throw new Error("Failed to generate unique voucher number");
 
     const expenseAccountId = await resolveExpenseAccountId(tx, {
       type,

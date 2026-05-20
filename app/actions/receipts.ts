@@ -32,44 +32,64 @@ export async function createReceipt(data: any) {
   const year = receiptDate.getFullYear();
 
   const result = await db.$transaction(async (tx) => {
-    // Generate sequential receipt number
-    const lastReceipt = await tx.receipt.findFirst({
-      where: {
-        date: {
-          gte: new Date(`${year}-01-01`),
-          lte: new Date(`${year}-12-31`),
-        },
-      },
-      orderBy: { receiptNo: "desc" },
-    });
+    // Generate sequential receipt number with retry for race conditions
+    let receipt;
+    let attempts = 0;
+    const maxAttempts = 5;
 
-    let nextNumber = 1;
-    if (lastReceipt) {
-      const parts = lastReceipt.receiptNo.split("-");
-      const lastSeq = parseInt(parts[parts.length - 1]);
-      if (!isNaN(lastSeq)) {
-        nextNumber = lastSeq + 1;
+    while (attempts < maxAttempts) {
+      const lastReceipt = await tx.receipt.findFirst({
+        where: {
+          date: {
+            gte: new Date(`${year}-01-01`),
+            lte: new Date(`${year}-12-31T23:59:59.999Z`),
+          },
+        },
+        orderBy: { receiptNo: "desc" },
+      });
+
+      let nextNumber = 1;
+      if (lastReceipt) {
+        const parts = lastReceipt.receiptNo.split("-");
+        const lastSeq = parseInt(parts[parts.length - 1]);
+        if (!isNaN(lastSeq)) {
+          nextNumber = lastSeq + 1;
+        }
+      }
+
+      // Increment by attempts to avoid collisions on retry
+      nextNumber += attempts;
+
+      const receiptNo = `RCP-${year}-${nextNumber.toString().padStart(3, "0")}`;
+
+      try {
+        receipt = await tx.receipt.create({
+          data: {
+            receiptNo,
+            date: receiptDate,
+            donorId: (donorId === "none" || !donorId) ? null : donorId,
+            type,
+            category,
+            accountType,
+            eventName,
+            amount: numAmount,
+            paymentMode,
+            referenceNo,
+            accountId,
+            narration,
+          },
+        });
+        break;
+      } catch (error: any) {
+        if (error.code === "P2002" && attempts < maxAttempts - 1) {
+          attempts++;
+          continue;
+        }
+        throw error;
       }
     }
 
-    const receiptNo = `RCP-${year}-${nextNumber.toString().padStart(3, "0")}`;
-
-    const receipt = await tx.receipt.create({
-      data: {
-        receiptNo,
-        date: receiptDate,
-        donorId: (donorId === "none" || !donorId) ? null : donorId,
-        type,
-        category,
-        accountType,
-        eventName,
-        amount: numAmount,
-        paymentMode,
-        referenceNo,
-        accountId,
-        narration,
-      },
-    });
+    if (!receipt) throw new Error("Failed to generate unique receipt number");
 
     const incomeAccountId = await resolveIncomeAccountId(tx, {
       type,

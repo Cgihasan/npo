@@ -46,7 +46,7 @@ export const ReceiptVoucher = React.forwardRef<HTMLDivElement, ReceiptVoucherPro
 
           <div className="mt-10 p-6 bg-emerald-50 rounded-lg border border-emerald-100 flex justify-between items-center">
             <span className="text-emerald-800 font-bold text-xl uppercase tracking-wider">Amount Received</span>
-            <span className="text-3xl font-black text-emerald-700">₹{Number(receipt.amount).toLocaleString()}</span>
+            <span className="text-3xl font-black text-emerald-700">₹{Number(receipt.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
 
           <div className="mt-6">

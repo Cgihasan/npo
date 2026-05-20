@@ -126,10 +126,10 @@ export default function ReportsPage() {
                       </Badge>
                     </td>
                     <td className="px-6 py-4 text-right font-mono font-medium text-emerald-600">
-                      {tx.debit > 0 ? `₹${Number(tx.debit).toLocaleString()}` : "—"}
+                      {tx.debit > 0 ? `₹${Number(tx.debit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
                     </td>
                     <td className="px-6 py-4 text-right font-mono font-medium text-amber-600">
-                      {tx.credit > 0 ? `₹${Number(tx.credit).toLocaleString()}` : "—"}
+                      {tx.credit > 0 ? `₹${Number(tx.credit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
                     </td>
                     <td className="px-6 py-4 text-xs text-muted-foreground max-w-[200px] truncate" title={tx.narration}>
                       {tx.narration || "—"}

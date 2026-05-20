@@ -122,7 +122,7 @@ export async function getDashboardStats() {
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
 
-  const [receiptsTotal, paymentsTotal, cashStats, bankStats] = await Promise.all([
+  const [receiptsTotal, paymentsTotal, cashStats, bankStats, cashReceipts, cashPayments] = await Promise.all([
     db.receipt.aggregate({
       _sum: { amount: true }
     }),
@@ -136,17 +136,31 @@ export async function getDashboardStats() {
     db.transaction.aggregate({
       where: { account: { type: "BANK" } },
       _sum: { debit: true, credit: true }
+    }),
+    db.receipt.aggregate({
+      where: { paymentMode: "Cash" },
+      _sum: { amount: true }
+    }),
+    db.payment.aggregate({
+      where: { paymentMode: "Cash" },
+      _sum: { amount: true }
     })
   ]);
 
   const cashInHand = (cashStats._sum.debit || 0) - (cashStats._sum.credit || 0);
   const bankBalance = (bankStats._sum.debit || 0) - (bankStats._sum.credit || 0);
+  const totalCashReceived = cashReceipts._sum.amount || 0;
+  const totalCashPaid = cashPayments._sum.amount || 0;
+  const cashBalance = cashInHand;
 
   return {
     totalReceipts: receiptsTotal._sum.amount || 0,
     totalPayments: paymentsTotal._sum.amount || 0,
     cashInHand,
     bankBalance,
+    totalCashReceived,
+    totalCashPaid,
+    cashBalance,
   };
 }
 

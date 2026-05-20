@@ -61,7 +61,7 @@ export default async function DashboardPage() {
               </span>
             </div>
             <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold mb-1">{kpi.title}</p>
-            <p className="text-3xl font-bold">₹{kpi.value.toLocaleString()}</p>
+            <p className="text-3xl font-bold">₹{kpi.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           </div>
         ))}
       </div>
@@ -87,13 +87,15 @@ export default async function DashboardPage() {
           <OverviewChart />
         </div>
 
-        <div className="rounded-xl border border-border/50 bg-card/60 backdrop-blur-sm flex flex-col">
-          <div className="p-4 border-b border-border/50 flex justify-between items-center">
-            <h3 className="text-lg font-bold">Recent Entries</h3>
-            <a href="/reports" className="text-sm font-bold text-pink-500 hover:underline">View All</a>
-          </div>
-          <div className="flex-1 overflow-y-auto max-h-[400px]">
-            <RecentTransactions />
+        <div className="space-y-6">
+          <div className="rounded-xl border border-border/50 bg-card/60 backdrop-blur-sm flex flex-col">
+            <div className="p-4 border-b border-border/50 flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Recent Transactions</h3>
+              <a href="/reports" className="text-xs font-medium text-primary hover:underline">View All</a>
+            </div>
+            <div className="flex-1 overflow-y-auto max-h-[400px]">
+              <RecentTransactions />
+            </div>
           </div>
         </div>
       </div>
@@ -135,7 +137,7 @@ async function AuditLogTable() {
             const entity = tx.account?.name || tx.narration || "-";
             const status = isReceipt ? "Verified" : isPayment ? "Verified" : "Pending";
             const statusColor = status === "Verified" ? "bg-emerald-500" : "bg-amber-500";
-            const amount = `₹${(tx.debit || tx.credit || 0).toLocaleString()}`;
+            const amount = `₹${(tx.debit || tx.credit || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
             return (
               <tr key={tx.id} className="hover:bg-accent/30 transition-colors">

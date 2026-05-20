@@ -71,7 +71,7 @@ function StatementCategory({
       <div className="flex justify-between items-end mb-3 border-b border-border/50 pb-2">
         <span className="font-bold text-foreground text-lg">{label}</span>
         <span className={cn("font-bold text-lg", totalColor)}>
-          ₹{total.toLocaleString()}
+          ₹{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </span>
       </div>
       {details.length > 0 && (
@@ -96,7 +96,7 @@ function StatementCategory({
                   <span className="text-muted-foreground">{item.name}</span>
                 </span>
                 <span className={cn("font-medium", item.value ? totalColor : "text-muted-foreground")}>
-                  {item.value ? `₹${item.value.toLocaleString()}` : "-"}
+                  {item.value ? `₹${item.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "-"}
                 </span>
               </div>
               {item.donors && item.donors.length > 0 && expandedItems.has(index) && (
@@ -108,7 +108,7 @@ function StatementCategory({
                     >
                       <span className="text-muted-foreground/80">{donor.name}</span>
                       <span className={cn("font-medium", totalColor)}>
-                        ₹{donor.amount.toLocaleString()}
+                        ₹{donor.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
                   ))}
@@ -215,7 +215,7 @@ export function ReceiptPaymentStatement({
                 Total Receipts
               </span>
               <span className="font-black text-sky-600 text-2xl">
-                ₹{data.totalReceipts.toLocaleString()}
+                ₹{data.totalReceipts.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
             <div className="flex-1 flex justify-between items-center sm:pl-6">
@@ -223,7 +223,7 @@ export function ReceiptPaymentStatement({
                 Total Payments
               </span>
               <span className="font-black text-purple-600 text-2xl">
-                ₹{data.totalPayments.toLocaleString()}
+                ₹{data.totalPayments.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
           </div>

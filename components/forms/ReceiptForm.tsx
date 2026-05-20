@@ -27,6 +27,8 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
 import { useEffect, useMemo, useState } from "react";
+import { format } from "date-fns";
+import { CalendarDatePicker } from "@/components/shared/CalendarDatePicker";
 import {
   getDonors,
   getAccounts,
@@ -264,7 +266,11 @@ export function ReceiptForm({ initialData }: ReceiptFormProps) {
                   <FormItem>
                     <FormLabel>Date</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <CalendarDatePicker
+                        label=""
+                        value={field.value ? new Date(field.value + "T00:00:00") : new Date()}
+                        onChange={(date) => field.onChange(format(date, "yyyy-MM-dd"))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

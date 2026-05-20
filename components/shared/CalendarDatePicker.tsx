@@ -26,7 +26,7 @@ export function CalendarDatePicker({
 
   return (
     <Field>
-      <FieldLabel>{label}</FieldLabel>
+      {label && <FieldLabel>{label}</FieldLabel>}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button

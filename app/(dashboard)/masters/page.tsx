@@ -275,7 +275,7 @@ export default function MastersPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right font-bold tabular-nums">
-                        ₹{Number(acc.balance).toLocaleString()}
+                        ₹{Number(acc.balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>

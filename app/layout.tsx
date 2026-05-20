@@ -1,4 +1,5 @@
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
+import { Toaster } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils';
 import '@/app/globals.css';
 
@@ -32,6 +33,7 @@ export default function RootLayout({
       <body className={cn('min-h-screen bg-background font-sans antialiased')} suppressHydrationWarning>
         <ThemeProvider attribute="class" enableSystem={true} defaultTheme="system">
           {children}
+          <Toaster position="top-center" />
         </ThemeProvider>
       </body>
     </html>

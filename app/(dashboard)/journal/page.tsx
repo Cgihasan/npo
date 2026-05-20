@@ -148,7 +148,7 @@ export default function JournalPage() {
                   <TableCell className="font-medium text-blue-600">{voucher.voucherNo}</TableCell>
                   <TableCell>{format(new Date(voucher.date), "dd/MM/yyyy")}</TableCell>
                   <TableCell className="max-w-xs truncate">{voucher.narration || "-"}</TableCell>
-                  <TableCell className="text-right font-bold">₹{Number(voucher.totalAmount).toLocaleString()}</TableCell>
+                  <TableCell className="text-right font-bold">₹{Number(voucher.totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -216,14 +216,14 @@ export default function JournalPage() {
                     {selectedVoucher.transactions?.map((t: any) => (
                       <TableRow key={t.id}>
                         <TableCell className="font-medium">{t.account?.accountType || t.account?.type || "-"}</TableCell>
-                        <TableCell className="text-right">{t.debit > 0 ? `₹${t.debit.toLocaleString()}` : "-"}</TableCell>
-                        <TableCell className="text-right">{t.credit > 0 ? `₹${t.credit.toLocaleString()}` : "-"}</TableCell>
+                        <TableCell className="text-right">{t.debit > 0 ? `₹${t.debit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "-"}</TableCell>
+                        <TableCell className="text-right">{t.credit > 0 ? `₹${t.credit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "-"}</TableCell>
                       </TableRow>
                     ))}
                     <TableRow className="bg-muted/30 font-bold">
                       <TableCell>Total</TableCell>
-                      <TableCell className="text-right">₹{selectedVoucher.totalAmount.toLocaleString()}</TableCell>
-                      <TableCell className="text-right">₹{selectedVoucher.totalAmount.toLocaleString()}</TableCell>
+                      <TableCell className="text-right">₹{selectedVoucher.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                      <TableCell className="text-right">₹{selectedVoucher.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>

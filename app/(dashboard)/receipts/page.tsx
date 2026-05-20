@@ -125,7 +125,7 @@ export default function ReceiptsPage() {
       receipt.donor?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       receipt.narration?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesDate = !dateFilter || receipt.date.startsWith(dateFilter);
+    const matchesDate = !dateFilter || new Date(receipt.date).toISOString().startsWith(dateFilter);
     const matchesType = typeFilter === "all" || receipt.type === typeFilter;
 
     return matchesSearch && matchesDate && matchesType;
@@ -255,7 +255,7 @@ export default function ReceiptsPage() {
                   <TableCell>
                     <Badge variant="outline">{receipt.type}</Badge>
                   </TableCell>
-                  <TableCell className="font-bold">₹{Number(receipt.amount).toLocaleString()}</TableCell>
+                  <TableCell className="font-bold">₹{Number(receipt.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                   <TableCell>{receipt.paymentMode}</TableCell>
                   <TableCell className="max-w-[200px] truncate">{receipt.narration || "—"}</TableCell>
                   <TableCell className="text-right">

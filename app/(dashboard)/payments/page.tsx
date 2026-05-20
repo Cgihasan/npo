@@ -105,7 +105,7 @@ export default function PaymentsPage() {
       payment.voucherNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       payment.narration?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesDate = !dateFilter || payment.date.startsWith(dateFilter);
+    const matchesDate = !dateFilter || new Date(payment.date).toISOString().startsWith(dateFilter);
     const matchesType = typeFilter === "all" || payment.type === typeFilter;
 
     return matchesSearch && matchesDate && matchesType;
@@ -208,7 +208,7 @@ export default function PaymentsPage() {
                   <TableCell>
                     <Badge variant="outline">{payment.type}</Badge>
                   </TableCell>
-                  <TableCell className="font-bold">₹{Number(payment.amount).toLocaleString()}</TableCell>
+                  <TableCell className="font-bold">₹{Number(payment.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                   <TableCell>
                     <Badge className="bg-emerald-500">
                       Paid
