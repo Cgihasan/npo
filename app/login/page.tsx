@@ -44,6 +44,12 @@ export default function LoginPage() {
         </div>
         <Button type="submit" className="w-full">Sign In</Button>
 
+        <p className="text-center text-sm">
+          <Link href="/forgot-password" className="font-medium text-muted-foreground hover:text-primary hover:underline">
+            Forgot password?
+          </Link>
+        </p>
+
         <p className="text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{' '}
           <Link href="/signup" className="font-semibold text-primary hover:underline">
