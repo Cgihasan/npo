@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -42,6 +43,13 @@ export default function LoginPage() {
           <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </div>
         <Button type="submit" className="w-full">Sign In</Button>
+
+        <p className="text-center text-sm text-muted-foreground">
+          Don&apos;t have an account?{' '}
+          <Link href="/signup" className="font-semibold text-primary hover:underline">
+            Sign up
+          </Link>
+        </p>
       </form>
     </div>
   );
