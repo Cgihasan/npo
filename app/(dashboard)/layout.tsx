@@ -14,9 +14,11 @@ export default async function DashboardLayout({
   if (!session) {
     redirect("/login");
   }
+  const role = (session.user as any)?.role;
+
   return (
     <div className="min-h-screen bg-background text-foreground" suppressHydrationWarning>
-      <Sidebar />
+      <Sidebar role={role} />
       <div className="ml-64 flex flex-col min-h-screen">
         <Navbar user={session.user} />
         <main className="flex-1 overflow-auto">

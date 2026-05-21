@@ -12,6 +12,7 @@ model User {
   name      String
   password  String
   role      String   @default("VIEWER")
+  active    Boolean  @default(true)
   createdAt DateTime @default(now())
 }
 

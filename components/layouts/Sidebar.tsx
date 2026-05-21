@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
-import { LayoutDashboard, Receipt, Wallet, Banknote, FileText, BarChart3, Users, Settings, ChevronDown, Heart, LogOut } from 'lucide-react';
+import { LayoutDashboard, Receipt, Wallet, Banknote, FileText, BarChart3, Users, Settings, ChevronDown, Heart, LogOut, Shield } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 
 const vouchersItems = [
@@ -18,7 +18,7 @@ const reportItems = [
   { href: '/reports/receipts-payments-statement', label: 'Receipts & Payment' },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ role }: { role?: string }) {
   const pathname = usePathname();
   const [vouchersOpen, setVouchersOpen] = useState(
     () => vouchersItems.some(item => pathname.startsWith(item.href))
@@ -130,6 +130,21 @@ export default function Sidebar() {
             <Users className="h-5 w-5" />
             <span>Masters</span>
           </Link>
+
+          {role === "ADMIN" && (
+            <Link
+              href="/users"
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
+                pathname === '/users'
+                  ? "bg-primary/10 text-primary font-semibold"
+                  : "text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+              )}
+            >
+              <Shield className="h-5 w-5" />
+              <span>Users</span>
+            </Link>
+          )}
         </div>
 
         <div className="mt-auto space-y-1">

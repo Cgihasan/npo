@@ -27,6 +27,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!isPasswordValid) return null;
 
+        // Reject disabled accounts
+        if (!user.active) return null;
+
         return {
           id: user.id,
           email: user.email,
