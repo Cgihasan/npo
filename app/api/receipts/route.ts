@@ -1,17 +1,29 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { receiptSchema } from "@/lib/schemas/financial";
+import { AUTHORIZED_ROLES } from "@/lib/constants";
 
 export async function POST(req: Request) {
   try {
     const session = await auth();
-    if (!session) {
+    if (!session?.user) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
+    if (!AUTHORIZED_ROLES.includes(session.user.role)) {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
+
     const body = await req.json();
+    const validatedData = receiptSchema.parse(body);
+    const { receiptNo } = body; // receiptNo is still needed from body if not in schema
+
+    if (!receiptNo) {
+      return new NextResponse("Receipt number is required", { status: 400 });
+    }
+
     const { 
-      receiptNo, 
       date, 
       donorId, 
       type, 
@@ -20,11 +32,7 @@ export async function POST(req: Request) {
       referenceNo, 
       accountId, 
       narration 
-    } = body;
-
-    if (!receiptNo || !date || !donorId || !amount || !accountId) {
-      return new NextResponse("Missing required fields", { status: 400 });
-    }
+    } = validatedData;
 
     // Use a transaction to ensure atomic updates
     const result = await db.$transaction(async (tx) => {
