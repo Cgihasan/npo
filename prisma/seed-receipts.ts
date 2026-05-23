@@ -9,14 +9,14 @@ const adapter = new PrismaBetterSqlite3({ url: 'file:dev.db' });
 const prisma = new PrismaClient({ adapter });
 
 // Excel serial date to JS Date
-function excelDateToJSDate(serial) {
+function excelDateToJSDate(serial: number) {
   const utcDays = Math.floor(serial - 25569);
   const date = new Date(Date.UTC(1970, 0, utcDays));
   return date;
 }
 
 // Clean string (handle special chars, spaces)
-function cleanStr(s) {
+function cleanStr(s: any) {
   if (!s) return null;
   return s.toString().trim();
 }
@@ -35,10 +35,10 @@ async function main() {
 
   // Fetch all accounts and donors
   const accounts = await prisma.account.findMany({ select: { id: true, name: true } });
-  const accountMap = Object.fromEntries(accounts.map(a => [a.name.trim().toLowerCase(), a.id]));
+  const accountMap = Object.fromEntries(accounts.map((a: any) => [a.name.trim().toLowerCase(), a.id]));
 
   const donors = await prisma.donor.findMany({ select: { id: true, name: true } });
-  const donorMap = Object.fromEntries(donors.map(d => [d.name.trim().toLowerCase(), d.id]));
+  const donorMap = Object.fromEntries(donors.map((d: any) => [d.name.trim().toLowerCase(), d.id]));
 
   const missingAccounts = new Set();
   const missingDonors = new Set();
@@ -131,7 +131,7 @@ async function main() {
         ],
       });
       inserted++;
-    } catch (e) {
+    } catch (e: any) {
       console.error(`Error on row ${i + 1}: ${e.message}`);
       skipped++;
     }
