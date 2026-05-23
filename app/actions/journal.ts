@@ -3,6 +3,8 @@
 import db from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { journalVoucherSchema } from "@/lib/schemas/financial";
+import { AUTHORIZED_ROLES, ADMIN_ONLY } from "@/lib/constants";
 
 export type JournalEntryInput = {
   accountId: string;
@@ -12,13 +14,19 @@ export type JournalEntryInput = {
 
 export async function createJournalVoucher(data: {
   date: string;
-  narration: string;
+  narration: string | null;
   entries: JournalEntryInput[];
 }) {
   const session = await auth();
-  if (!session) throw new Error("Unauthorized");
+  if (!session?.user) throw new Error("Unauthorized");
 
-  const { date, narration, entries } = data;
+  if (!AUTHORIZED_ROLES.includes(session.user.role)) {
+    throw new Error("Forbidden: Insufficient permissions");
+  }
+
+  const validatedData = journalVoucherSchema.parse(data);
+
+  const { date, narration, entries } = validatedData;
   const voucherDate = new Date(date);
   const year = voucherDate.getFullYear();
 
@@ -91,7 +99,11 @@ export async function createJournalVoucher(data: {
 
 export async function deleteJournalVoucher(id: string) {
   const session = await auth();
-  if (!session) throw new Error("Unauthorized");
+  if (!session?.user) throw new Error("Unauthorized");
+
+  if (!ADMIN_ONLY.includes(session.user.role)) {
+    throw new Error("Forbidden: Only ADMIN can delete records");
+  }
 
   await db.$transaction(async (tx) => {
     // Delete associated transactions first

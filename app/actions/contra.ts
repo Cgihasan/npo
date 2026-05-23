@@ -3,23 +3,30 @@
 import db from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { contraSchema } from "@/lib/schemas/financial";
+import { AUTHORIZED_ROLES, ADMIN_ONLY } from "@/lib/constants";
 
 export async function createContra(data: any) {
   const session = await auth();
-  if (!session) throw new Error("Unauthorized");
+  if (!session?.user) throw new Error("Unauthorized");
+
+  if (!AUTHORIZED_ROLES.includes(session.user.role)) {
+    throw new Error("Forbidden: Insufficient permissions");
+  }
+
+  const validatedData = contraSchema.parse(data);
 
   const { 
-    entryNo, 
     date, 
     transferType,
     fromAccountId,
     toAccountId,
-    amount, 
+    amount: numAmount,
     reference,
     narration 
-  } = data;
+  } = validatedData;
 
-  const numAmount = Number(amount);
+  const entryNo = data.entryNo; // entryNo is usually generated or passed separately
 
   const result = await db.$transaction(async (tx) => {
     const contra = await tx.contraEntry.create({
@@ -67,20 +74,25 @@ export async function createContra(data: any) {
 
 export async function updateContra(id: string, data: any) {
   const session = await auth();
-  if (!session) throw new Error("Unauthorized");
+  if (!session?.user) throw new Error("Unauthorized");
+
+  if (!AUTHORIZED_ROLES.includes(session.user.role)) {
+    throw new Error("Forbidden: Insufficient permissions");
+  }
+
   if (!id) throw new Error("Contra ID is required");
+
+  const validatedData = contraSchema.parse(data);
 
   const { 
     date, 
     transferType,
     fromAccountId,
     toAccountId,
-    amount, 
+    amount: numAmount,
     reference,
     narration 
-  } = data;
-
-  const numAmount = Number(amount);
+  } = validatedData;
   const contraDate = new Date(date);
 
   const result = await db.$transaction(async (tx) => {
@@ -137,7 +149,12 @@ export async function updateContra(id: string, data: any) {
 
 export async function deleteContra(id: string) {
   const session = await auth();
-  if (!session) throw new Error("Unauthorized");
+  if (!session?.user) throw new Error("Unauthorized");
+
+  if (!ADMIN_ONLY.includes(session.user.role)) {
+    throw new Error("Forbidden: Only ADMIN can delete records");
+  }
+
   if (!id) throw new Error("Contra ID is required");
 
   await db.$transaction(async (tx) => {

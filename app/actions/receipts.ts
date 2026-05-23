@@ -3,10 +3,18 @@
 import db from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { receiptSchema } from "@/lib/schemas/financial";
+import { AUTHORIZED_ROLES, ADMIN_ONLY } from "@/lib/constants";
 
 export async function createReceipt(data: any) {
   const session = await auth();
-  if (!session) throw new Error("Unauthorized");
+  if (!session?.user) throw new Error("Unauthorized");
+
+  if (!AUTHORIZED_ROLES.includes(session.user.role)) {
+    throw new Error("Forbidden: Insufficient permissions");
+  }
+
+  const validatedData = receiptSchema.parse(data);
 
   const { 
     date, 
@@ -15,14 +23,13 @@ export async function createReceipt(data: any) {
     category,
     accountType,
     eventName,
-    amount, 
+    amount: numAmount,
     paymentMode, 
     referenceNo, 
     accountId, 
     narration 
-  } = data;
+  } = validatedData;
 
-  const numAmount = Number(amount);
   const receiptDate = new Date(date);
   const year = receiptDate.getFullYear();
 
@@ -87,8 +94,15 @@ export async function createReceipt(data: any) {
 
 export async function updateReceipt(id: string, data: any) {
   const session = await auth();
-  if (!session) throw new Error("Unauthorized");
+  if (!session?.user) throw new Error("Unauthorized");
+
+  if (!AUTHORIZED_ROLES.includes(session.user.role)) {
+    throw new Error("Forbidden: Insufficient permissions");
+  }
+
   if (!id) throw new Error("Receipt ID is required");
+
+  const validatedData = receiptSchema.parse(data);
 
   const { 
     date, 
@@ -97,14 +111,13 @@ export async function updateReceipt(id: string, data: any) {
     category,
     accountType,
     eventName,
-    amount, 
+    amount: numAmount,
     paymentMode, 
     referenceNo, 
     accountId, 
     narration 
-  } = data;
+  } = validatedData;
 
-  const numAmount = Number(amount);
   const receiptDate = new Date(date);
 
   const result = await db.$transaction(async (tx) => {
@@ -156,7 +169,11 @@ export async function updateReceipt(id: string, data: any) {
 
 export async function deleteReceipt(id: string) {
   const session = await auth();
-  if (!session) throw new Error("Unauthorized");
+  if (!session?.user) throw new Error("Unauthorized");
+
+  if (!ADMIN_ONLY.includes(session.user.role)) {
+    throw new Error("Forbidden: Only ADMIN can delete records");
+  }
 
   await db.$transaction(async (tx) => {
     // Delete associated transactions first
@@ -180,7 +197,11 @@ export async function deleteReceipt(id: string) {
 
 export async function deleteReceipts(ids: string[]) {
   const session = await auth();
-  if (!session) throw new Error("Unauthorized");
+  if (!session?.user) throw new Error("Unauthorized");
+
+  if (!ADMIN_ONLY.includes(session.user.role)) {
+    throw new Error("Forbidden: Only ADMIN can delete records");
+  }
 
   await db.$transaction(async (tx) => {
     // Delete associated transactions first

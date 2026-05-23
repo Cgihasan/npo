@@ -1,17 +1,29 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { paymentSchema } from "@/lib/schemas/financial";
+import { AUTHORIZED_ROLES } from "@/lib/constants";
 
 export async function POST(req: Request) {
   try {
     const session = await auth();
-    if (!session) {
+    if (!session?.user) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
+    if (!AUTHORIZED_ROLES.includes(session.user.role)) {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
+
     const body = await req.json();
+    const validatedData = paymentSchema.parse(body);
+    const { voucherNo } = body;
+
+    if (!voucherNo) {
+      return new NextResponse("Voucher number is required", { status: 400 });
+    }
+
     const { 
-      voucherNo, 
       date, 
       type, 
       category,
@@ -22,11 +34,7 @@ export async function POST(req: Request) {
       bankName,
       accountId, 
       narration 
-    } = body;
-
-    if (!voucherNo || !date || !amount || !accountId) {
-      return new NextResponse("Missing required fields", { status: 400 });
-    }
+    } = validatedData;
 
     const result = await db.$transaction(async (tx) => {
       const payment = await tx.payment.create({

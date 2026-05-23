@@ -1,17 +1,29 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { contraSchema } from "@/lib/schemas/financial";
+import { AUTHORIZED_ROLES } from "@/lib/constants";
 
 export async function POST(req: Request) {
   try {
     const session = await auth();
-    if (!session) {
+    if (!session?.user) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
+    if (!AUTHORIZED_ROLES.includes(session.user.role)) {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
+
     const body = await req.json();
+    const validatedData = contraSchema.parse(body);
+    const { entryNo } = body;
+
+    if (!entryNo) {
+      return new NextResponse("Entry number is required", { status: 400 });
+    }
+
     const { 
-      entryNo, 
       date, 
       transferType,
       fromAccountId,
@@ -19,11 +31,7 @@ export async function POST(req: Request) {
       amount, 
       reference,
       narration 
-    } = body;
-
-    if (!entryNo || !date || !fromAccountId || !toAccountId || !amount) {
-      return new NextResponse("Missing required fields", { status: 400 });
-    }
+    } = validatedData;
 
     const result = await db.$transaction(async (tx) => {
       // 1. Create the Contra Entry
