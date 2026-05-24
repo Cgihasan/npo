@@ -1,8 +1,8 @@
-# Aqaba Trust — NPO Accounting Management System
+# Aqaba Trust
 
 ## 1. App Overview
 
-- **Name**: Aqaba Trust — NPO Accounting Management System
+- **Name**: Aqaba Trust
 - **Purpose**: Double-entry bookkeeping for non-profit organizations
 - **Key Modules**: Receipts, Payments, Journal Vouchers, Contra Entries, Reports, Master Data
 

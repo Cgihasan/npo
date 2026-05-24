@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import '@/app/globals.css';
 
 export const metadata = {
-  title: 'NPO Accounting System',
+  title: 'Aqaba Trust',
   description: 'Modern accounting platform for non‑profits',
 };
 

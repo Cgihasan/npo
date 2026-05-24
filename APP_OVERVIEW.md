@@ -1,4 +1,4 @@
-# NPO Accounting Management System - Project Overview
+# Aqaba Trust - Project Overview
 
 This document provides a comprehensive overview of the NPO (Non-Profit Organization) Accounting Management System. It is designed to track financial data (income, expenses, and asset/liability adjustments) using double-entry bookkeeping principles. 
 

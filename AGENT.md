@@ -1,4 +1,4 @@
-# NPO Accounting Management System
+# Aqaba Trust
 
 ## 🎯 Project Overview
 Build a modern, production-ready **Non-Profit Organization (NPO) Accounting Management System** with stunning UI, smooth animations, and complete double-entry bookkeeping features for receipts, payments, and contra entries.

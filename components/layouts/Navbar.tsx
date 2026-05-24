@@ -3,7 +3,6 @@
 import { Sun, Moon, Bell, LogOut } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import {
   DropdownMenu,
@@ -13,7 +12,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export default function Navbar({ user }: { user?: any }) {
-  const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -21,7 +19,7 @@ export default function Navbar({ user }: { user?: any }) {
     setMounted(true);
   }, []);
 
-  const pageTitle = pathname === '/dashboard' ? 'Aqaba Trust' : 'NPO Accounting';
+  const pageTitle = 'Aqaba Trust';
 
   return (
     <header className="sticky top-0 right-0 z-40 flex items-center justify-between h-16 px-8 border-b border-border bg-background/80 backdrop-blur-xl">
