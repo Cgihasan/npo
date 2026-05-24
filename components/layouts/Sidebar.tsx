@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
-import { LayoutDashboard, Receipt, Wallet, Banknote, FileText, BarChart3, Users, Settings, ChevronDown, Heart, LogOut, Shield } from 'lucide-react';
+import { LayoutDashboard, Receipt, Wallet, Banknote, FileText, BarChart3, Users, Settings, ChevronDown, Heart, LogOut, Shield, ScrollText } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 
 const vouchersItems = [
@@ -132,18 +132,35 @@ export default function Sidebar({ role }: { role?: string }) {
           </Link>
 
           {role === "ADMIN" && (
-            <Link
-              href="/users"
-              className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
-                pathname === '/users'
-                  ? "bg-primary/10 text-primary font-semibold"
-                  : "text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
-              )}
-            >
-              <Shield className="h-5 w-5" />
-              <span>Users</span>
-            </Link>
+            <>
+              <div className="mt-4 mb-1 px-4">
+                <p className="text-[10px] uppercase tracking-widest font-semibold text-sidebar-foreground/40">Administration</p>
+              </div>
+              <Link
+                href="/users"
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
+                  pathname === '/users'
+                    ? "bg-primary/10 text-primary font-semibold"
+                    : "text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+                )}
+              >
+                <Shield className="h-5 w-5" />
+                <span>Users</span>
+              </Link>
+              <Link
+                href="/audit-log"
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-lg transition-colors",
+                  pathname === '/audit-log'
+                    ? "bg-primary/10 text-primary font-semibold"
+                    : "text-sidebar-foreground hover:text-sidebar-accent-foreground hover:bg-sidebar-accent"
+                )}
+              >
+                <ScrollText className="h-5 w-5" />
+                <span>Audit Log</span>
+              </Link>
+            </>
           )}
         </div>
 
