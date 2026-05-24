@@ -117,7 +117,7 @@ export default function PaymentsPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Payments</h2>
-          <p className="text-muted-foreground">Track and manage all expense payments.</p>
+          <p className="text-muted-foreground">Track and manage all expense payments</p>
         </div>
         <Button asChild className="bg-amber-600 hover:bg-amber-700">
           <Link href="/payments/new">
