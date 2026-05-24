@@ -86,6 +86,7 @@ model Payment {
   type        String
   category    String?
   accountType String?
+  eventName   String?
   amount      Float
   paymentMode String
   chequeNo    String?

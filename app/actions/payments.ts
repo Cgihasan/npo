@@ -23,7 +23,8 @@ export async function createPayment(data: any) {
     chequeNo,
     bankName,
     accountId, 
-    narration 
+    narration,
+    eventName 
   } = data;
 
   const numAmount = Number(amount);
@@ -75,6 +76,7 @@ export async function createPayment(data: any) {
             bankName,
             accountId,
             narration,
+            eventName: eventName === "None" ? null : (eventName || null),
           },
         });
         break;
@@ -154,7 +156,8 @@ export async function updatePayment(id: string, data: any) {
     chequeNo,
     bankName,
     accountId, 
-    narration 
+    narration,
+    eventName 
   } = data;
 
   const numAmount = Number(amount);
@@ -174,6 +177,7 @@ export async function updatePayment(id: string, data: any) {
         bankName,
         accountId,
         narration,
+        eventName: eventName === "None" ? null : (eventName || null),
       },
     });
 
