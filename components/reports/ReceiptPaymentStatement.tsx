@@ -261,7 +261,7 @@ export function ReceiptPaymentStatement({
               <span className="font-bold text-muted-foreground tracking-wide uppercase text-sm">
                 Total Receipts
               </span>
-              <span className="font-black text-sky-600 text-2xl">
+              <span className="font-bold text-sky-600 text-base">
                 ₹{data.totalReceipts.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
@@ -269,7 +269,7 @@ export function ReceiptPaymentStatement({
               <span className="font-bold text-muted-foreground tracking-wide uppercase text-sm">
                 Total Payments
               </span>
-              <span className="font-black text-purple-600 text-2xl">
+              <span className="font-bold text-purple-600 text-base">
                 ₹{data.totalPayments.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
