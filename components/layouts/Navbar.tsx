@@ -1,9 +1,16 @@
 "use client";
 
-import { Sun, Moon, Bell } from 'lucide-react';
+import { Sun, Moon, Bell, LogOut } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { signOut } from 'next-auth/react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 
 export default function Navbar({ user }: { user?: any }) {
   const pathname = usePathname();
@@ -35,15 +42,25 @@ export default function Navbar({ user }: { user?: any }) {
           <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full" />
         </button>
         {user && (
-          <div className="flex items-center gap-3 border-l border-border pl-4">
-            <div className="text-right">
-              <p className="text-sm font-semibold">{user.name ?? user.email}</p>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Principal</p>
-            </div>
-            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm border border-border">
-              {(user.name ?? user.email ?? "U").charAt(0).toUpperCase()}
-            </div>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button type="button" className="flex items-center gap-3 border-l border-border pl-4 cursor-pointer">
+                <div className="text-right">
+                  <p className="text-sm font-semibold">{user.name ?? user.email}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Principal</p>
+                </div>
+                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm border border-border">
+                  {(user.name ?? user.email ?? "U").charAt(0).toUpperCase()}
+                </div>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" sideOffset={8} className="w-48">
+              <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive cursor-pointer">
+                <LogOut className="h-4 w-4" />
+                <span>Logout</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
     </header>
