@@ -46,6 +46,7 @@ const paymentFormSchema = z.object({
   type: z.string().min(1, "Please select or enter an expense ledger."),
   category: z.string().optional(),
   accountType: z.string().optional(),
+  eventName: z.string().optional(),
   amount: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
     message: "Amount must be a positive number.",
   }),
@@ -133,11 +134,20 @@ export function PaymentForm({ initialData }: PaymentFormProps) {
       chequeNo: initialData?.chequeNo || "",
       bankName: initialData?.bankName || "",
       accountId: initialData?.accountId || "",
+      eventName: initialData?.eventName || "None",
       narration: initialData?.narration || "",
     },
   });
 
   const selectedDate = form.watch("date");
+  const selectedType = form.watch("type");
+  const showEventName = selectedType === "Events Expenses";
+
+  useEffect(() => {
+    if (!showEventName) {
+      form.setValue("eventName", "None", { shouldValidate: false });
+    }
+  }, [showEventName, form]);
 
   useEffect(() => {
     async function updateVoucherNo() {
@@ -322,6 +332,35 @@ export function PaymentForm({ initialData }: PaymentFormProps) {
                 name="accountType"
                 render={({ field }) => <input type="hidden" {...field} />}
               />
+              {showEventName && (
+                <FormField
+                  control={form.control}
+                  name="eventName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Event Name</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select event" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Fund Raise For Islamic Books">Fund Raise For Islamic Books</SelectItem>
+                          <SelectItem value="Fund Raise For Air Conditioner">Fund Raise For Air Conditioner</SelectItem>
+                          <SelectItem value="Fund Raise For Islamic Class 1st">Fund Raise For Islamic Class 1st</SelectItem>
+                          <SelectItem value="Fund Raise For NRC/CAA/NPR Seminar">Fund Raise For NRC/CAA/NPR Seminar</SelectItem>
+                          <SelectItem value="Islamic Events 2023 - Madani Jan">Islamic Events 2023 - Madani Jan</SelectItem>
+                          <SelectItem value="Islamic Events 2023 - Madani Feb">Islamic Events 2023 - Madani Feb</SelectItem>
+                          <SelectItem value="Fundraise For Equipment 2023">Fundraise For Equipment 2023</SelectItem>
+                          <SelectItem value="None">None</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
             </CardContent>
           </Card>
 
