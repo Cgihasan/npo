@@ -2,26 +2,26 @@
 
 import { useEffect, useState } from "react";
 import { getPayments } from "@/app/actions/payments";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, FileText, MoreVertical, Edit, Trash } from "lucide-react";
 import Link from "next/link";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { 
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -101,10 +101,10 @@ export default function PaymentsPage() {
   };
 
   const filteredPayments = payments.filter((payment) => {
-    const matchesSearch = 
+    const matchesSearch =
       payment.voucherNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       payment.narration?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesDate = !dateFilter || new Date(payment.date).toISOString().startsWith(dateFilter);
     const matchesType = typeFilter === "all" || payment.type === typeFilter;
 
@@ -116,7 +116,7 @@ export default function PaymentsPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Payments</h2>
-          <p className="text-muted-foreground">Track and manage all expense payments.</p>
+          <p className="text-muted-foreground">Track and manage all expense payments</p>
         </div>
         <Button asChild className="bg-amber-600 hover:bg-amber-700">
           <Link href="/payments/new">
@@ -136,9 +136,9 @@ export default function PaymentsPage() {
           />
         </div>
         <div className="flex items-center gap-2 w-full md:w-auto">
-          <Input 
-            type="date" 
-            className="w-full md:w-[200px]" 
+          <Input
+            type="date"
+            className="w-full md:w-[200px]"
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
           />
@@ -229,12 +229,12 @@ export default function PaymentsPage() {
                         }}>
                           <Printer className="mr-2 h-4 w-4" /> Print Voucher
                         </DropdownMenuItem>
-                         <DropdownMenuItem asChild>
+                        <DropdownMenuItem asChild>
                           <Link href={`/payments/${payment.id}/edit`}>
                             <Edit className="mr-2 h-4 w-4" /> Edit
                           </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           className="text-destructive"
                           onClick={() => {
                             setSelectedPayment(payment);
@@ -255,10 +255,10 @@ export default function PaymentsPage() {
 
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-<DialogHeader>
-             <DialogTitle>Payment Voucher Preview</DialogTitle>
-             <DialogDescription>Preview of payment voucher details.</DialogDescription>
-           </DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Payment Voucher Preview</DialogTitle>
+            <DialogDescription>Preview of payment voucher details.</DialogDescription>
+          </DialogHeader>
           <div className="flex justify-center p-4 bg-muted/30 rounded-lg overflow-x-auto">
             {selectedPayment && <PaymentVoucher payment={selectedPayment} />}
           </div>
@@ -266,8 +266,8 @@ export default function PaymentsPage() {
             <Button variant="outline" onClick={() => setIsPreviewOpen(false)}>
               Close
             </Button>
-            <Button 
-              className="bg-amber-600 hover:bg-amber-700" 
+            <Button
+              className="bg-amber-600 hover:bg-amber-700"
               onClick={handlePrint}
               disabled={isPrinting}
             >
@@ -280,24 +280,24 @@ export default function PaymentsPage() {
 
       <Dialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
         <DialogContent>
-<DialogHeader>
-             <DialogTitle>Are you absolutely sure?</DialogTitle>
-             <DialogDescription>
-               This action cannot be undone. This will permanently delete the payment
-               {selectedPayment && <span className="font-bold"> {selectedPayment.voucherNo}</span>} and remove its data from our servers.
-             </DialogDescription>
-           </DialogHeader>
-           <div className="py-4">
-             <p className="text-sm text-muted-foreground">
-               This action cannot be undone. This will permanently delete the payment
-               {selectedPayment && <span className="font-bold"> {selectedPayment.voucherNo}</span>} and remove its data from our servers.
-             </p>
-           </div>
+          <DialogHeader>
+            <DialogTitle>Are you absolutely sure?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete the payment
+              {selectedPayment && <span className="font-bold"> {selectedPayment.voucherNo}</span>} and remove its data from our servers.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              This action cannot be undone. This will permanently delete the payment
+              {selectedPayment && <span className="font-bold"> {selectedPayment.voucherNo}</span>} and remove its data from our servers.
+            </p>
+          </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setIsDeleteAlertOpen(false)}>
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleDelete}
               variant="destructive"
               disabled={isDeleting}
