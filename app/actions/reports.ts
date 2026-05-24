@@ -287,11 +287,11 @@ export async function getReceiptPaymentStatement(startDate: string, endDate: str
   // 2. Direct Incomes from Receipts table grouped by accountType
   const receipts = await db.receipt.findMany({
     where: { date: { gte: start, lte: end } },
-    select: { amount: true, accountType: true, category: true, donor: { select: { name: true } } },
+    select: { amount: true, accountType: true, category: true, eventName: true, donor: { select: { name: true } } },
   });
 
-  // Map: accountType -> { total amount, donors array }
-  const directIncomesMap = new Map<string, { total: number; donors: Map<string, number> }>();
+  // Map: accountType -> { total amount, donors with events breakdown }
+  const directIncomesMap = new Map<string, { total: number; donors: Map<string, { total: number; events: Map<string, number> }> }>();
   receipts.forEach(r => {
     const label = r.accountType || r.category || "Other Income";
     if (!directIncomesMap.has(label)) {
@@ -300,15 +300,31 @@ export async function getReceiptPaymentStatement(startDate: string, endDate: str
     const entry = directIncomesMap.get(label)!;
     entry.total += r.amount;
     if (r.donor?.name) {
-      const donorCurrent = entry.donors.get(r.donor.name) || 0;
-      entry.donors.set(r.donor.name, donorCurrent + r.amount);
+      if (!entry.donors.has(r.donor.name)) {
+        entry.donors.set(r.donor.name, { total: 0, events: new Map() });
+      }
+      const donorEntry = entry.donors.get(r.donor.name)!;
+      donorEntry.total += r.amount;
+      if (r.eventName && r.eventName !== "None") {
+        const eventCurrent = donorEntry.events.get(r.eventName) || 0;
+        donorEntry.events.set(r.eventName, eventCurrent + r.amount);
+      }
     }
   });
 
   const directIncomes = Array.from(directIncomesMap.entries()).map(([name, data]) => ({
     name,
     value: data.total,
-    donors: Array.from(data.donors.entries()).map(([donorName, amount]) => ({ name: donorName, amount })),
+    donors: Array.from(data.donors.entries()).map(([donorName, donorData]) => ({
+      name: donorName,
+      amount: donorData.total,
+      events: donorData.events.size > 0
+        ? Array.from(donorData.events.entries()).map(([eventName, eventAmount]) => ({
+            name: eventName,
+            amount: eventAmount,
+          }))
+        : undefined,
+    })),
   }));
   const totalDirectIncomes = directIncomes.reduce((sum, item) => sum + item.value, 0);
 

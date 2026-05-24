@@ -123,7 +123,8 @@ export default function ReceiptsPage() {
     const matchesSearch = 
       receipt.receiptNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       receipt.donor?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      receipt.narration?.toLowerCase().includes(searchTerm.toLowerCase());
+      receipt.narration?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (receipt.eventName?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
     
     const matchesDate = !dateFilter || new Date(receipt.date).toISOString().startsWith(dateFilter);
     const matchesType = typeFilter === "all" || receipt.type === typeFilter;
@@ -221,6 +222,7 @@ export default function ReceiptsPage() {
               <TableHead>Type</TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Mode</TableHead>
+              <TableHead>Event Name</TableHead>
               <TableHead>Narration</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -228,11 +230,11 @@ export default function ReceiptsPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-10">Loading receipts...</TableCell>
+                <TableCell colSpan={10} className="text-center py-10">Loading receipts...</TableCell>
               </TableRow>
             ) : filteredReceipts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-10 text-muted-foreground">No receipts found matching the filters.</TableCell>
+                <TableCell colSpan={10} className="text-center py-10 text-muted-foreground">No receipts found matching the filters.</TableCell>
               </TableRow>
             ) : (
               filteredReceipts.map((receipt) => (
@@ -257,6 +259,15 @@ export default function ReceiptsPage() {
                   </TableCell>
                   <TableCell className="font-bold">₹{Number(receipt.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                   <TableCell>{receipt.paymentMode}</TableCell>
+                  <TableCell className="max-w-[200px]">
+                    {receipt.eventName && receipt.eventName !== "None" ? (
+                      <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 truncate block max-w-full">
+                        {receipt.eventName}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className="max-w-[200px] truncate">{receipt.narration || "—"}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>

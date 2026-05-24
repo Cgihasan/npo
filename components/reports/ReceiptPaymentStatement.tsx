@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 interface DonorDetail {
   name: string;
   amount: number;
+  events?: { name: string; amount: number }[];
 }
 
 interface StatementDetail {
@@ -53,6 +54,7 @@ function StatementCategory({
   totalColor: string;
 }) {
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
+  const [expandedDonors, setExpandedDonors] = useState<Set<string>>(new Set());
 
   const toggleExpand = (index: number) => {
     setExpandedItems(prev => {
@@ -61,6 +63,18 @@ function StatementCategory({
         next.delete(index);
       } else {
         next.add(index);
+      }
+      return next;
+    });
+  };
+
+  const toggleDonorExpand = (key: string) => {
+    setExpandedDonors(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
       }
       return next;
     });
@@ -101,17 +115,50 @@ function StatementCategory({
               </div>
               {item.donors && item.donors.length > 0 && expandedItems.has(index) && (
                 <div className="ml-8 mt-1 mb-2 space-y-0.5 border-l-2 border-sky-200 dark:border-sky-800 pl-3">
-                  {item.donors.map((donor, dIdx) => (
-                    <div
-                      key={dIdx}
-                      className="flex justify-between items-center text-xs py-0.5"
-                    >
-                      <span className="text-muted-foreground/80">{donor.name}</span>
-                      <span className={cn("font-medium", totalColor)}>
-                        ₹{donor.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  ))}
+                  {item.donors.map((donor, dIdx) => {
+                    const donorKey = `${index}-${dIdx}`;
+                    const hasEvents = donor.events && donor.events.length > 0;
+                    return (
+                      <div key={dIdx}>
+                        <div className="flex justify-between items-center text-xs py-0.5">
+                          <span className="flex items-center gap-1.5">
+                            {hasEvents && (
+                              <button
+                                onClick={() => toggleDonorExpand(donorKey)}
+                                className={cn(
+                                  "w-4 h-4 flex items-center justify-center rounded text-[10px] font-bold transition-all duration-200 shrink-0",
+                                  expandedDonors.has(donorKey)
+                                    ? "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
+                                    : "bg-muted/50 text-muted-foreground hover:bg-amber-100 hover:text-amber-600 dark:hover:bg-amber-900 dark:hover:text-amber-400"
+                                )}
+                              >
+                                {expandedDonors.has(donorKey) ? "−" : "+"}
+                              </button>
+                            )}
+                            <span className="text-muted-foreground/80">{donor.name}</span>
+                          </span>
+                          <span className={cn("font-medium", totalColor)}>
+                            ₹{donor.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+                        {hasEvents && expandedDonors.has(donorKey) && (
+                          <div className="ml-5 mt-0.5 mb-1 space-y-0.5 border-l-2 border-amber-200 dark:border-amber-800 pl-2.5">
+                            {donor.events!.map((event, eIdx) => (
+                              <div
+                                key={eIdx}
+                                className="flex justify-between items-center text-[11px] py-0.5"
+                              >
+                                <span className="text-muted-foreground/60">{event.name}</span>
+                                <span className={cn("font-medium", totalColor)}>
+                                  ₹{event.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

@@ -103,7 +103,8 @@ export default function PaymentsPage() {
   const filteredPayments = payments.filter((payment) => {
     const matchesSearch =
       payment.voucherNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.narration?.toLowerCase().includes(searchTerm.toLowerCase());
+      payment.narration?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (payment.eventName?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
 
     const matchesDate = !dateFilter || new Date(payment.date).toISOString().startsWith(dateFilter);
     const matchesType = typeFilter === "all" || payment.type === typeFilter;
@@ -187,6 +188,7 @@ export default function PaymentsPage() {
               <TableHead>Type</TableHead>
               <TableHead>Amount</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Event Name</TableHead>
               <TableHead>Narration</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -194,11 +196,11 @@ export default function PaymentsPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-10">Loading payments...</TableCell>
+                <TableCell colSpan={8} className="text-center py-10">Loading payments...</TableCell>
               </TableRow>
             ) : filteredPayments.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No payments found matching the filters.</TableCell>
+                <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">No payments found matching the filters.</TableCell>
               </TableRow>
             ) : (
               filteredPayments.map((payment) => (
@@ -213,6 +215,15 @@ export default function PaymentsPage() {
                     <Badge className="bg-emerald-500">
                       Paid
                     </Badge>
+                  </TableCell>
+                  <TableCell className="max-w-[200px]">
+                    {payment.eventName && payment.eventName !== "None" ? (
+                      <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 truncate block max-w-full">
+                        {payment.eventName}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell className="max-w-[200px] truncate">{payment.narration || "—"}</TableCell>
                   <TableCell className="text-right">
