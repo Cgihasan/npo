@@ -142,3 +142,29 @@
     font-family: "Inter", var(--font-custom-sans);
   }
 }
+
+@layer utilities {
+  .glass {
+    @apply bg-card/60 backdrop-blur-md border border-border/50 shadow-sm;
+  }
+
+  .glass-emerald {
+    @apply bg-emerald-500/5 backdrop-blur-md border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.05)];
+  }
+
+  .glass-amber {
+    @apply bg-amber-500/5 backdrop-blur-md border border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.05)];
+  }
+
+  .glass-indigo {
+    @apply bg-indigo-500/5 backdrop-blur-md border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.05)];
+  }
+
+  .glass-blue {
+    @apply bg-blue-500/5 backdrop-blur-md border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.05)];
+  }
+
+  .text-glow-emerald {
+    text-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+  }
+}

@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Landmark, Banknote } from "lucide-react";
 import { motion } from "framer-motion";
+import ContraFlow from "@/components/shared/ContraFlow";
 
 import { useEffect, useState } from "react";
 import { getAssetAccounts } from "@/app/actions/masters";
@@ -159,24 +160,11 @@ export function ContraForm({ initialData }: ContraFormProps) {
                 )}
               />
               
-              <div className="flex items-center justify-between p-4 bg-muted rounded-lg border border-dashed">
-                <div className="flex flex-col items-center gap-2">
-                  {transferType === "CASH_TO_BANK" ? <Banknote className="h-8 w-8 text-emerald-500" /> : <Landmark className="h-8 w-8 text-indigo-500" />}
-                  <span className="text-xs font-medium">{transferType === "CASH_TO_BANK" ? "Cash Account" : "Bank Account"}</span>
-                </div>
-                
-                <motion.div
-                  animate={{ x: [0, 10, 0] }}
-                  transition={{ repeat: Infinity, duration: 1.5 }}
-                >
-                  <ArrowRight className="h-6 w-6 text-muted-foreground" />
-                </motion.div>
-
-                <div className="flex flex-col items-center gap-2">
-                  {transferType === "CASH_TO_BANK" ? <Landmark className="h-8 w-8 text-indigo-500" /> : <Banknote className="h-8 w-8 text-emerald-500" />}
-                  <span className="text-xs font-medium">{transferType === "CASH_TO_BANK" ? "Bank Account" : "Cash Account"}</span>
-                </div>
-              </div>
+              <ContraFlow
+                fromType={transferType === "CASH_TO_BANK" ? "CASH" : "BANK"}
+                toType={transferType === "CASH_TO_BANK" ? "BANK" : "CASH"}
+                amount={Number(form.watch("amount") || 0)}
+              />
 
               <FormField
                 control={form.control}
@@ -270,7 +258,7 @@ export function ContraForm({ initialData }: ContraFormProps) {
           <Button variant="outline" type="button" onClick={() => router.back()}>
             Cancel
           </Button>
-          <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={isSubmitting}>
+          <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700" disabled={isSubmitting}>
             {isSubmitting ? "Processing..." : "Confirm Transfer"}
           </Button>
         </div>

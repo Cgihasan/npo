@@ -2,6 +2,8 @@ import { OverviewChart } from "@/components/dashboard/OverviewChart";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
 import { getDashboardStats } from "@/app/actions/reports";
 import { TrendingUp, TrendingDown, Wallet, Landmark } from "lucide-react";
+import NumberTicker from "@/components/shared/NumberTicker";
+import { StaggerContainer, StaggerItem } from "@/components/shared/StaggerAnimation";
 
 export default async function DashboardPage() {
   const stats = await getDashboardStats();
@@ -38,36 +40,37 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="space-y-8 p-8">
-      <div>
+    <StaggerContainer className="space-y-8 p-8">
+      <StaggerItem>
         <h1 className="text-3xl font-bold tracking-tight">Welcome back, Admin</h1>
         <p className="text-muted-foreground mt-1">
           {new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })} • System status: Operational
         </p>
-      </div>
+      </StaggerItem>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {kpis.map((kpi) => (
-          <div
-            key={kpi.title}
-            className="group rounded-xl p-6 border border-border/50 bg-card/60 backdrop-blur-sm transition-all duration-300 hover:shadow-[0_0_20px_rgba(16,185,129,0.08)] hover:border-emerald-500/20"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div className={`p-2 rounded-lg bg-${kpi.accent}-500/10`}>
-                <kpi.icon className={`h-5 w-5 text-${kpi.accent}-500`} />
+          <StaggerItem key={kpi.title}>
+            <div className={`group rounded-xl p-6 transition-all duration-300 glass-${kpi.accent} hover:shadow-[0_0_25px_rgba(16,185,129,0.12)] hover:scale-[1.02] hover:border-emerald-500/30`}>
+              <div className="flex justify-between items-start mb-4">
+                <div className={`p-2 rounded-lg bg-${kpi.accent}-500/10`}>
+                  <kpi.icon className={`h-5 w-5 text-${kpi.accent}-500`} />
+                </div>
+                <span className={`text-[10px] font-bold text-${kpi.accent}-500 bg-${kpi.accent}-500/10 px-2 py-0.5 rounded-full`}>
+                  {kpi.accent === "emerald" ? "+12.5%" : kpi.accent === "amber" ? "-3.2%" : "—"}
+                </span>
               </div>
-              <span className={`text-[10px] font-bold text-${kpi.accent}-500 bg-${kpi.accent}-500/10 px-2 py-0.5 rounded-full`}>
-                {kpi.accent === "emerald" ? "+12.5%" : kpi.accent === "amber" ? "-3.2%" : "—"}
-              </span>
+              <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold mb-1">{kpi.title}</p>
+              <p className="text-3xl font-bold">
+                <NumberTicker value={kpi.value} prefix="₹" decimalPlaces={2} />
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold mb-1">{kpi.title}</p>
-            <p className="text-3xl font-bold">₹{kpi.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-          </div>
+          </StaggerItem>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 rounded-xl border border-border/50 bg-card/60 backdrop-blur-sm p-6">
+        <StaggerItem className="lg:col-span-2 rounded-xl glass p-6">
           <div className="flex justify-between items-center mb-6">
             <div>
               <h3 className="text-lg font-semibold">Income vs Expenses</h3>
@@ -85,10 +88,10 @@ export default async function DashboardPage() {
             </div>
           </div>
           <OverviewChart />
-        </div>
+        </StaggerItem>
 
         <div className="space-y-6">
-          <div className="rounded-xl border border-border/50 bg-card/60 backdrop-blur-sm flex flex-col">
+          <StaggerItem className="rounded-xl glass flex flex-col h-full">
             <div className="p-4 border-b border-border/50 flex justify-between items-center">
               <h3 className="text-lg font-semibold">Recent Transactions</h3>
               <a href="/reports" className="text-xs font-medium text-primary hover:underline">View All</a>
@@ -96,19 +99,19 @@ export default async function DashboardPage() {
             <div className="flex-1 overflow-y-auto max-h-[400px]">
               <RecentTransactions />
             </div>
-          </div>
+          </StaggerItem>
         </div>
       </div>
 
-      <div className="rounded-xl border border-border/50 bg-card/60 backdrop-blur-sm overflow-hidden">
+      <StaggerItem className="rounded-xl glass overflow-hidden">
         <div className="p-4 border-b border-border/50 flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <h3 className="text-lg font-semibold">Financial Audit Log</h3>
           <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold ml-auto">Live Monitoring</span>
         </div>
         <AuditLogTable />
-      </div>
-    </div>
+      </StaggerItem>
+    </StaggerContainer>
   );
 }
 
@@ -137,7 +140,7 @@ async function AuditLogTable() {
             const entity = tx.account?.name || tx.narration || "-";
             const status = isReceipt ? "Verified" : isPayment ? "Verified" : "Pending";
             const statusColor = status === "Verified" ? "bg-emerald-500" : "bg-amber-500";
-            const amount = `₹${(tx.debit || tx.credit || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const amountValue = Number(tx.debit || tx.credit || 0);
 
             return (
               <tr key={tx.id} className="hover:bg-accent/30 transition-colors">
@@ -152,7 +155,9 @@ async function AuditLogTable() {
                     <span>{status}</span>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-right font-mono font-medium">{amount}</td>
+                <td className="px-6 py-4 text-right font-mono font-medium">
+                  <NumberTicker value={amountValue} prefix="₹" decimalPlaces={2} />
+                </td>
               </tr>
             );
           })}
