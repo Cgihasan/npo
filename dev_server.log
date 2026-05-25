@@ -1,0 +1,62 @@
+
+> temp-app@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.5 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+✓ Ready in 574ms
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+
+○ Compiling /login ...
+ GET /login 200 in 5.3s (next.js: 4.7s, application-code: 548ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <InnerScrollAndFocusHandlerOld focusAndScrollRef={{scrollRef:null, ...}} cacheNode={{rsc:{...}, ...}}>
+      <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+        <LoadingBoundary name="login/" loading={null}>
+          <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>
+            <RedirectBoundary>
+              <RedirectErrorBoundary router={{...}}>
+                <InnerLayoutRouter url="/login" tree={[...]} params={{}} cacheNode={{rsc:{...}, ...}} segmentPath={[...]} ...>
+                  <SegmentViewNode type="page" pagePath="login/page...">
+                    <SegmentTrieNode>
+                    <ClientPageRoot Component={function LoginPage} serverProvidedParams={{...}}>
+                      <LoginPage params={Promise} searchParams={Promise}>
+                        <div className="flex min-h...">
+                          <div className="w-full max...">
+                            <div>
+                            <r postLoginRedirectURL="/dashboard">
+                              <a
++                               href="/api/auth/login?post_login_redirect_url=http%3A%2F%2Flocalhost%3A3000%2Fdashboard"
+-                               href="/api/auth/login?post_login_redirect_url=undefined%2Fdashboard"
+                              >
+                            ...
+                  ...
+                ...
+      ...
+
+    at push.console.error (components/providers/ThemeProvider.tsx:13:10)
+  11 |       return;
+  12 |     }
+> 13 |     orig.apply(console, args);
+     |          ^
+  14 |   };
+  15 | }
+  16 | (components/providers/ThemeProvider.tsx:13:10)
+ GET /signup 200 in 940ms (next.js: 697ms, application-code: 243ms)

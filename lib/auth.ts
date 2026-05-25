@@ -1,61 +1,25 @@
-import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import db from "./db";
-import bcrypt from "bcryptjs";
+import { syncKindeUser } from "./kinde-sync";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  session: { strategy: "jwt" },
-  providers: [
-    Credentials({
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+/**
+ * Compatibility layer to replace NextAuth's auth() with Kinde
+ * This allows us to minimize changes in other files.
+ */
+export async function auth() {
+  const user = await syncKindeUser();
+  if (!user) return null;
 
-        const user = await db.user.findUnique({
-          where: { email: credentials.email as string },
-        });
-
-        if (!user) return null;
-
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password as string,
-          user.password
-        );
-
-        if (!isPasswordValid) return null;
-
-        // Reject disabled accounts
-        if (!user.active) return null;
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        };
-      },
-    }),
-  ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.role = (user as any).role;
-        token.id = user.id;
-      }
-      return token;
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
     },
-    async session({ session, token }) {
-      if (session.user) {
-        (session.user as any).role = token.role;
-        (session.user as any).id = token.id;
-      }
-      return session;
-    },
-  },
-  pages: {
-    signIn: "/login",
-  },
-});
+  };
+}
+
+// Mock other exports if needed to prevent import errors,
+// though they should be removed from usages eventually.
+export const signIn = () => { throw new Error("Use Kinde LoginLink instead"); };
+export const signOut = () => { throw new Error("Use Kinde LogoutLink instead"); };
+export const handlers = {};
