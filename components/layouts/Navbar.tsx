@@ -3,7 +3,7 @@
 import { Sun, Moon, Bell, LogOut } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
-import { signOut } from 'next-auth/react';
+import { LogoutLink } from "@kinde-oss/kinde-auth-nextjs/components";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -53,10 +53,12 @@ export default function Navbar({ user }: { user?: any }) {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" sideOffset={8} className="w-48">
-              <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive cursor-pointer">
-                <LogOut className="h-4 w-4" />
-                <span>Logout</span>
-              </DropdownMenuItem>
+              <LogoutLink>
+                <DropdownMenuItem className="text-destructive focus:text-destructive cursor-pointer">
+                  <LogOut className="h-4 w-4" />
+                  <span>Logout</span>
+                </DropdownMenuItem>
+              </LogoutLink>
             </DropdownMenuContent>
           </DropdownMenu>
         )}

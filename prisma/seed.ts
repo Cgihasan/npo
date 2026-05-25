@@ -1,11 +1,8 @@
 import db from "@/lib/db";
-import bcrypt from "bcryptjs";
 
 const prisma = db;
 
 async function main() {
-  const hashedPassword = await bcrypt.hash("admin123", 10);
-
   // 0. Clean database
   await prisma.transaction.deleteMany();
   await prisma.receipt.deleteMany();
@@ -15,14 +12,25 @@ async function main() {
   await prisma.vendor.deleteMany();
   await prisma.account.deleteMany();
 
-  // 1. Create Admin User
-  const admin = await prisma.user.upsert({
+  // 1. Create Admin Users
+  await prisma.user.upsert({
     where: { email: "admin@npo.org" },
     update: {},
     create: {
       email: "admin@npo.org",
       name: "Admin User",
-      password: hashedPassword,
+      password: "",
+      role: "ADMIN",
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: "hasantell51@gmail.com" },
+    update: {},
+    create: {
+      email: "hasantell51@gmail.com",
+      name: "Hasan",
+      password: "",
       role: "ADMIN",
     },
   });

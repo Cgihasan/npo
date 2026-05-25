@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { LayoutDashboard, Receipt, Wallet, Banknote, FileText, BarChart3, Users, Settings, ChevronDown, Heart, LogOut, Shield, ScrollText } from 'lucide-react';
-import { signOut } from 'next-auth/react';
+import { LogoutLink } from "@kinde-oss/kinde-auth-nextjs/components";
 
 const vouchersItems = [
   { href: '/receipts', label: 'Receipts', icon: Receipt },
@@ -177,13 +177,14 @@ export default function Sidebar({ role }: { role?: string }) {
             <Settings className="h-5 w-5" />
             <span>Settings</span>
           </Link>
-          <button
-            onClick={() => signOut()}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-          >
-            <LogOut className="h-5 w-5" />
-            <span>Logout</span>
-          </button>
+          <LogoutLink className="w-full">
+            <button
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+            >
+              <LogOut className="h-5 w-5" />
+              <span>Logout</span>
+            </button>
+          </LogoutLink>
         </div>
       </div>
     </nav>
