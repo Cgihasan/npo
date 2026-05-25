@@ -21,7 +21,7 @@ A web-based accounting and management system for Non-Profit Organizations built 
 | Framework | [Next.js 15](https://nextjs.org/) (App Router) |
 | Database | [Neon](https://neon.tech/) (Serverless PostgreSQL) |
 | ORM | [Prisma](https://www.prisma.io/) with `@prisma/adapter-neon` |
-| Auth | [NextAuth v5](https://next-auth.js.org/) with JWT sessions |
+| Auth | [Kinde (Free Tier)](https://kinde.com/) |
 | Email | [Nodemailer](https://nodemailer.com/) (SMTP) |
 | UI | [shadcn/ui](https://ui.shadcn.com/) + Tailwind CSS |
 | Font | [Geist](https://vercel.com/font) |

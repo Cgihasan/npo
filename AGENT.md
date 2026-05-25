@@ -364,9 +364,9 @@ npx create-next-app@latest . --typescript --tailwind --app
 # Install dependencies
 npm install framer-motion lucide-react react-hook-form zod @hookform/resolvers \
   @tanstack/react-table recharts date-fns sonner next-themes \
-  @prisma/client next-auth bcryptjs jspdf html2canvas
+  @prisma/client @kinde-oss/kinde-auth-nextjs jspdf html2canvas
 
-npm install -D prisma @types/bcryptjs
+npm install -D prisma
 
 # Setup shadcn/ui
 npx shadcn@latest init
