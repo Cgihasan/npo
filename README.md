@@ -119,12 +119,10 @@ app/
     masters/            # Accounts, Donors, Vendors
     reports/            # Receipts & Payments Statement
     users/              # Admin user management
-  login/                # Login page
-  signup/               # Signup page
-  forgot-password/      # Request password reset
-  reset-password/       # Complete password reset
+  login/                # Redirects to Kinde hosted login
+  signup/               # Redirects to Kinde hosted signup
   actions/              # Server actions (API logic)
-  api/auth/             # NextAuth API route
+  api/auth/             # Kinde Auth API routes
 components/
   forms/                # Form components (Receipt, Payment, Journal, etc.)
   layouts/              # Navbar, Sidebar

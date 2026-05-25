@@ -60,3 +60,4 @@ https://react.dev/link/hydration-mismatch
   15 | }
   16 | (components/providers/ThemeProvider.tsx:13:10)
  GET /signup 200 in 940ms (next.js: 697ms, application-code: 243ms)
+  Reload env: .env

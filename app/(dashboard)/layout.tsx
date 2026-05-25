@@ -6,6 +6,8 @@ import { syncKindeUser } from "@/lib/kinde-sync";
 
 import { PageTransition } from "@/components/providers/PageTransition";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardLayout({
   children,
 }: {
