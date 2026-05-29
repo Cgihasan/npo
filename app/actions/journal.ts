@@ -176,15 +176,36 @@ export async function deleteJournalVoucher(id: string) {
   return { success: true };
 }
 
-export async function getJournalVouchers() {
+export async function getJournalVouchers(params?: {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+}) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
-  
-  const vouchers = await db.journalVoucher.findMany({
-    orderBy: {
-      date: "desc",
-    },
-  });
+
+  const page = params?.page || 1;
+  const pageSize = params?.pageSize || 20;
+  const skip = (page - 1) * pageSize;
+
+  const where: any = {};
+
+  if (params?.search) {
+    where.OR = [
+      { voucherNo: { contains: params.search, mode: "insensitive" } },
+      { narration: { contains: params.search, mode: "insensitive" } },
+    ];
+  }
+
+  const [vouchers, total] = await Promise.all([
+    db.journalVoucher.findMany({
+      where,
+      orderBy: { date: "desc" },
+      skip,
+      take: pageSize,
+    }),
+    db.journalVoucher.count({ where }),
+  ]);
 
   // Fetch transactions for these vouchers
   const voucherIds = vouchers.map(v => v.id);
@@ -199,7 +220,7 @@ export async function getJournalVouchers() {
   });
 
   // Attach transactions and calculate total amount (which is total debit)
-  return vouchers.map(voucher => {
+  const items = vouchers.map(voucher => {
     const vTransactions = transactions.filter(t => t.refId === voucher.id);
     const totalAmount = vTransactions.reduce((sum, t) => sum + t.debit, 0);
     return {
@@ -208,6 +229,13 @@ export async function getJournalVouchers() {
       totalAmount
     };
   });
+
+  return {
+    items,
+    total,
+    totalPages: Math.ceil(total / pageSize),
+    page,
+  };
 }
 
 export async function getJournalVoucherById(id: string) {

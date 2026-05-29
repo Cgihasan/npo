@@ -1,5 +1,6 @@
 import { OverviewChart } from "@/components/dashboard/OverviewChart";
 import { RecentTransactions } from "@/components/dashboard/RecentTransactions";
+import { BudgetUtilization } from "@/components/dashboard/BudgetUtilization";
 import { getDashboardStats } from "@/app/actions/reports";
 import { TrendingUp, TrendingDown, Wallet, Landmark } from "lucide-react";
 
@@ -97,6 +98,7 @@ export default async function DashboardPage() {
               <RecentTransactions />
             </div>
           </div>
+          <BudgetUtilization />
         </div>
       </div>
 

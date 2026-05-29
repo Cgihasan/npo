@@ -11,7 +11,8 @@ import {
   TableRow 
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowRightLeft, MoreVertical, Trash, Edit } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, ArrowRightLeft, MoreVertical, Trash, Edit, Search, Download } from "lucide-react";
 import Link from "next/link";
 import { deleteContra } from "@/app/actions/contra";
 import { toast } from "sonner";
@@ -31,34 +32,57 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Pagination } from "@/components/shared/Pagination";
+import { exportToExcel } from "@/lib/export-excel";
 
 export default function ContraPage() {
-  const [entries, setEntries] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [data, setData] = useState<{ items: any[]; total: number; totalPages: number }>({
+    items: [],
+    total: 0,
+    totalPages: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [selectedEntry, setSelectedEntry] = useState<any>(null);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Debounced fetch when search or page changes
   useEffect(() => {
-    async function loadEntries() {
+    const timer = setTimeout(async () => {
+      setIsLoading(true);
       try {
-        const data = await getContraEntries();
-        setEntries(data);
+        const result = await getContraEntries({
+          page: currentPage,
+          search: searchTerm || undefined,
+        });
+        setData(result);
       } catch (error) {
         toast.error("Failed to load contra entries.");
       } finally {
         setIsLoading(false);
       }
-    }
-    loadEntries();
-  }, []);
+    }, searchTerm ? 300 : 0);
+    return () => clearTimeout(timer);
+  }, [currentPage, searchTerm]);
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   const handleDelete = async () => {
     if (!selectedEntry) return;
     try {
       setIsDeleting(true);
       await deleteContra(selectedEntry.id);
-      setEntries(entries.filter(e => e.id !== selectedEntry.id));
+      setData(prev => ({ ...prev, items: prev.items.filter(e => e.id !== selectedEntry.id), total: prev.total - 1 }));
       toast.success("Contra entry deleted successfully");
       setIsDeleteAlertOpen(false);
     } catch (error) {
@@ -67,6 +91,27 @@ export default function ContraPage() {
       setIsDeleting(false);
     }
   };
+
+  const handleExport = () => {
+    try {
+      const exportData = data.items.map((e) => ({
+        "Entry No.": e.entryNo,
+        "Date": format(new Date(e.date), "dd/MM/yyyy"),
+        "From Account": e.fromAccountId,
+        "To Account": e.toAccountId,
+        "Amount": e.amount,
+        "Reference": e.reference || "",
+        "Narration": e.narration || "",
+      }));
+      exportToExcel(exportData, `Contra_${format(new Date(), "yyyy-MM-dd")}`);
+      toast.success("Excel exported successfully!");
+    } catch (error) {
+      toast.error("Failed to export Excel.");
+    }
+  };
+
+  // No more client-side filtering — filtering is server-side via getContraEntries()
+
   return (
     <div className="space-y-6 p-4 md:p-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -74,11 +119,33 @@ export default function ContraPage() {
           <h2 className="text-3xl font-bold tracking-tight">Contra Entries</h2>
           <p className="text-muted-foreground">Transfer money between your own accounts.</p>
         </div>
-        <Button asChild className="bg-indigo-600 hover:bg-indigo-700">
-          <Link href="/contra/new">
-            <Plus className="mr-2 h-4 w-4" /> New Contra Entry
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={handleExport} disabled={data.total === 0}>
+            <Download className="mr-2 h-4 w-4" /> Export
+          </Button>
+          <Button asChild className="bg-indigo-600 hover:bg-indigo-700">
+            <Link href="/contra/new">
+              <Plus className="mr-2 h-4 w-4" /> New Contra Entry
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex flex-col md:flex-row items-center gap-4">
+        <div className="relative w-full max-w-sm">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search entry no, account, or narration..."
+            className="pl-8"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        {searchTerm && (
+          <Button variant="ghost" onClick={() => setSearchTerm("")}>
+            Clear
+          </Button>
+        )}
       </div>
 
       <div className="rounded-md border bg-card shadow-sm">
@@ -96,23 +163,52 @@ export default function ContraPage() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-4" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                </TableRow>
+              ))
+            ) : data.items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-10">Loading entries...</TableCell>
-              </TableRow>
-            ) : entries.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No entries found.</TableCell>
+                <TableCell colSpan={7} className="text-center py-16">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                      <ArrowRightLeft className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-base font-semibold text-foreground">No contra entries found</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {searchTerm
+                          ? "Try a different search term."
+                          : "Create your first contra entry to transfer between accounts."}
+                      </p>
+                    </div>
+                    {!searchTerm && (
+                      <Button asChild className="mt-2 bg-indigo-600 hover:bg-indigo-700">
+                        <Link href="/contra/new">
+                          <Plus className="mr-2 h-4 w-4" /> New Contra Entry
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
               </TableRow>
             ) : (
-              entries.map((entry: any) => (
+              data.items.map((entry: any) => (
                 <TableRow key={entry.id}>
                   <TableCell className="font-medium text-indigo-600">{entry.entryNo}</TableCell>
                   <TableCell>{format(new Date(entry.date), "dd/MM/yyyy")}</TableCell>
-                  <TableCell>{entry.fromAccountId}</TableCell>
+                  <TableCell className="max-w-[150px] truncate" title={entry.fromAccountId}>{entry.fromAccountId}</TableCell>
                   <TableCell>
                     <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
                   </TableCell>
-                  <TableCell>{entry.toAccountId}</TableCell>
+                  <TableCell className="max-w-[150px] truncate" title={entry.toAccountId}>{entry.toAccountId}</TableCell>
                   <TableCell className="font-bold">₹{Number(entry.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
@@ -145,6 +241,14 @@ export default function ContraPage() {
           </TableBody>
         </Table>
       </div>
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={data.totalPages}
+        total={data.total}
+        pageSize={20}
+        onPageChange={handlePageChange}
+      />
 
       <Dialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
         <DialogContent>

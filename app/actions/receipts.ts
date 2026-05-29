@@ -246,18 +246,65 @@ export async function getReceiptById(id: string) {
   });
 }
 
-export async function getReceipts() {
+export async function getReceipts(params?: {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  dateFilter?: string;
+  typeFilter?: string;
+}) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
-  
-  return await db.receipt.findMany({
-    include: {
-      donor: true,
-    },
-    orderBy: {
-      date: "desc",
-    },
-  });
+
+  const page = params?.page || 1;
+  const pageSize = params?.pageSize || 20;
+  const skip = (page - 1) * pageSize;
+
+  const where: any = {};
+
+  // Search across receiptNo, donor name, narration, eventName
+  if (params?.search) {
+    where.OR = [
+      { receiptNo: { contains: params.search, mode: "insensitive" } },
+      { donor: { name: { contains: params.search, mode: "insensitive" } } },
+      { narration: { contains: params.search, mode: "insensitive" } },
+      { eventName: { contains: params.search, mode: "insensitive" } },
+    ];
+  }
+
+  // Date filter (exact day)
+  if (params?.dateFilter) {
+    const filterDate = new Date(params.dateFilter);
+    const nextDay = new Date(filterDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    where.date = {
+      gte: filterDate,
+      lt: nextDay,
+    };
+  }
+
+  // Type filter
+  if (params?.typeFilter && params.typeFilter !== "all") {
+    where.type = params.typeFilter;
+  }
+
+  const [items, total] = await Promise.all([
+    db.receipt.findMany({
+      where,
+      include: { donor: true },
+      orderBy: { date: "desc" },
+      skip,
+      take: pageSize,
+    }),
+    db.receipt.count({ where }),
+  ]);
+
+  return {
+    items,
+    total,
+    totalPages: Math.ceil(total / pageSize),
+    page,
+  };
 }
 
 export async function getNextReceiptNumber(date: string) {

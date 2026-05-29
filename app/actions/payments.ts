@@ -227,6 +227,28 @@ export async function deletePayment(id: string) {
   return { success: true };
 }
 
+export async function deletePayments(ids: string[]) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+
+  await db.$transaction(async (tx) => {
+    await tx.transaction.deleteMany({
+      where: {
+        refId: { in: ids },
+        refType: "PAYMENT",
+      },
+    });
+
+    await tx.payment.deleteMany({
+      where: { id: { in: ids } },
+    });
+  });
+
+  revalidatePath("/payments");
+  revalidatePath("/dashboard");
+  return { success: true };
+}
+
 export async function getPaymentById(id: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
@@ -237,13 +259,61 @@ export async function getPaymentById(id: string) {
   });
 }
 
-export async function getPayments() {
+export async function getPayments(params?: {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  dateFilter?: string;
+  typeFilter?: string;
+}) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
-  
-  return await db.payment.findMany({
-    orderBy: {
-      date: "desc",
-    },
-  });
+
+  const page = params?.page || 1;
+  const pageSize = params?.pageSize || 20;
+  const skip = (page - 1) * pageSize;
+
+  const where: any = {};
+
+  // Search across voucherNo, narration, eventName
+  if (params?.search) {
+    where.OR = [
+      { voucherNo: { contains: params.search, mode: "insensitive" } },
+      { narration: { contains: params.search, mode: "insensitive" } },
+      { eventName: { contains: params.search, mode: "insensitive" } },
+    ];
+  }
+
+  // Date filter (exact day)
+  if (params?.dateFilter) {
+    const filterDate = new Date(params.dateFilter);
+    const nextDay = new Date(filterDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    where.date = {
+      gte: filterDate,
+      lt: nextDay,
+    };
+  }
+
+  // Type filter
+  if (params?.typeFilter && params.typeFilter !== "all") {
+    where.type = params.typeFilter;
+  }
+
+  const [items, total] = await Promise.all([
+    db.payment.findMany({
+      where,
+      orderBy: { date: "desc" },
+      skip,
+      take: pageSize,
+    }),
+    db.payment.count({ where }),
+  ]);
+
+  return {
+    items,
+    total,
+    totalPages: Math.ceil(total / pageSize),
+    page,
+  };
 }

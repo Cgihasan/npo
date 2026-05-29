@@ -58,6 +58,7 @@ model Account {
   accountType  String?
   balance      Float         @default(0)
   transactions Transaction[]
+  budgets      Budget[]
 }
 
 model Receipt {
@@ -121,6 +122,20 @@ model Transaction {
   date      DateTime
   createdAt DateTime @default(now())
   account   Account  @relation(fields: [accountId], references: [id])
+}
+
+model Budget {
+  id          String   @id @default(cuid())
+  accountId   String
+  fiscalYear  Int
+  totalAmount Float
+  period      String   @default("ANNUAL") // MONTHLY, QUARTERLY, ANNUAL
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  account Account @relation(fields: [accountId], references: [id])
+
+  @@unique([accountId, fiscalYear])
 }
 
 model JournalVoucher {

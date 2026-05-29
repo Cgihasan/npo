@@ -2,9 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { getTransactions } from "@/app/actions/reports";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Loader2, Search, ArrowUpDown } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 
 export default function ReportsPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -36,17 +44,15 @@ export default function ReportsPage() {
     );
   });
 
-  const uniqueRefIds = Array.from(new Set(filtered.map((tx: any) => tx.refId)));
   const refIdToSerial = new Map<string, number>();
-  uniqueRefIds.forEach((id, index) => {
-    refIdToSerial.set(id, index + 1);
-  });
-  const uniqueCount = uniqueRefIds.length;
-
-  const refIdCounts = new Map<string, number>();
+  const seen = new Set<string>();
   filtered.forEach((tx: any) => {
-    refIdCounts.set(tx.refId, (refIdCounts.get(tx.refId) || 0) + 1);
+    if (!seen.has(tx.refId)) {
+      seen.add(tx.refId);
+      refIdToSerial.set(tx.refId, seen.size);
+    }
   });
+  const uniqueCount = seen.size;
 
   return (
     <div className="space-y-8 p-8">
@@ -72,74 +78,77 @@ export default function ReportsPage() {
           <span className="text-xs text-muted-foreground">{uniqueCount} entries</span>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border/50 text-muted-foreground text-[11px] uppercase tracking-widest">
-                <th className="px-6 py-4 text-left font-semibold w-16">S.No.</th>
-                <th className="px-6 py-4 text-left font-semibold">
-                  <div className="flex items-center gap-1">
-                    Date <ArrowUpDown className="h-3 w-3" />
-                  </div>
-                </th>
-                <th className="px-6 py-4 text-left font-semibold">Account</th>
-                <th className="px-6 py-4 text-left font-semibold">Type</th>
-                <th className="px-6 py-4 text-right font-semibold">Debit (In)</th>
-                <th className="px-6 py-4 text-right font-semibold">Credit (Out)</th>
-                <th className="px-6 py-4 text-left font-semibold">Narration</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/30">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12 text-center">#</TableHead>
+                <TableHead className="w-28">Date</TableHead>
+                <TableHead>Account</TableHead>
+                <TableHead className="w-24">Type</TableHead>
+                <TableHead className="w-36 text-right">Debit (In)</TableHead>
+                <TableHead className="w-36 text-right">Credit (Out)</TableHead>
+                <TableHead>Narration</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {isLoading ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-16">
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-16">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" />
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-16 text-muted-foreground">No transactions found.</td>
-                </tr>
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-16 text-muted-foreground">
+                    No transactions found.
+                  </TableCell>
+                </TableRow>
               ) : (
-                filtered.map((tx: any, index: number) => {
-                  const isFirst = filtered.findIndex((t: any) => t.refId === tx.refId) === index;
-                  const rowSpan = refIdCounts.get(tx.refId) || 1;
-
-                  return (
-                    <tr key={tx.id} className="hover:bg-accent/30 transition-colors">
-                      {isFirst && (
-                        <>
-                          <td rowSpan={rowSpan} className="px-6 py-4 font-mono text-xs text-muted-foreground bg-card/40 align-middle">
-                            {refIdToSerial.get(tx.refId)}
-                          </td>
-                          <td rowSpan={rowSpan} className="px-6 py-4 font-mono text-xs bg-card/40 align-middle">
-                            {format(new Date(tx.date), "dd/MM/yyyy")}
-                          </td>
-                        </>
-                      )}
-                      <td className="px-6 py-4 font-medium">{tx.account?.name || tx.account?.type || "-"}</td>
-                    <td className="px-6 py-4">
+                filtered.map((tx: any, index: number) => (
+                  <TableRow key={tx.id}>
+                    <TableCell className="text-center font-mono text-xs text-muted-foreground">
+                      {refIdToSerial.get(tx.refId)}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {format(new Date(tx.date), "dd/MM/yyyy")}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {tx.account?.name || tx.account?.type || "-"}
+                    </TableCell>
+                    <TableCell>
                       <Badge
                         variant="outline"
-                        className={tx.refType === "RECEIPT" ? "border-emerald-500/30 text-emerald-600 bg-emerald-500/5" : tx.refType === "PAYMENT" ? "border-amber-500/30 text-amber-600 bg-amber-500/5" : tx.refType === "CONTRA" ? "border-blue-500/30 text-blue-600 bg-blue-500/5" : "border-purple-500/30 text-purple-600 bg-purple-500/5"}
+                        className={
+                          tx.refType === "RECEIPT"
+                            ? "border-emerald-500/30 text-emerald-600 bg-emerald-500/5"
+                            : tx.refType === "PAYMENT"
+                            ? "border-amber-500/30 text-amber-600 bg-amber-500/5"
+                            : tx.refType === "CONTRA"
+                            ? "border-blue-500/30 text-blue-600 bg-blue-500/5"
+                            : "border-purple-500/30 text-purple-600 bg-purple-500/5"
+                        }
                       >
                         {tx.refType}
                       </Badge>
-                    </td>
-                    <td className="px-6 py-4 text-right font-mono font-medium text-emerald-600">
-                      {tx.debit > 0 ? `₹${Number(tx.debit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
-                    </td>
-                    <td className="px-6 py-4 text-right font-mono font-medium text-amber-600">
-                      {tx.credit > 0 ? `₹${Number(tx.credit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—"}
-                    </td>
-                    <td className="px-6 py-4 text-xs text-muted-foreground max-w-[200px] truncate" title={tx.narration}>
+                    </TableCell>
+                    <TableCell className="text-right font-mono font-medium text-emerald-600">
+                      {tx.debit > 0
+                        ? `₹${Number(tx.debit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="text-right font-mono font-medium text-amber-600">
+                      {tx.credit > 0
+                        ? `₹${Number(tx.credit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        : "—"}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground max-w-[240px] truncate" title={tx.narration}>
                       {tx.narration || "—"}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-            </tbody>
-          </table>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
       </div>
     </div>

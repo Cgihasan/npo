@@ -168,13 +168,44 @@ export async function getContraById(id: string) {
   });
 }
 
-export async function getContraEntries() {
+export async function getContraEntries(params?: {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+}) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
-  
-  return await db.contraEntry.findMany({
-    orderBy: {
-      date: "desc",
-    },
-  });
+
+  const page = params?.page || 1;
+  const pageSize = params?.pageSize || 20;
+  const skip = (page - 1) * pageSize;
+
+  const where: any = {};
+
+  if (params?.search) {
+    where.OR = [
+      { entryNo: { contains: params.search, mode: "insensitive" } },
+      { fromAccountId: { contains: params.search, mode: "insensitive" } },
+      { toAccountId: { contains: params.search, mode: "insensitive" } },
+      { narration: { contains: params.search, mode: "insensitive" } },
+      { reference: { contains: params.search, mode: "insensitive" } },
+    ];
+  }
+
+  const [items, total] = await Promise.all([
+    db.contraEntry.findMany({
+      where,
+      orderBy: { date: "desc" },
+      skip,
+      take: pageSize,
+    }),
+    db.contraEntry.count({ where }),
+  ]);
+
+  return {
+    items,
+    total,
+    totalPages: Math.ceil(total / pageSize),
+    page,
+  };
 }

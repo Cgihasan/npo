@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, FileText, MoreVertical, Edit, Trash } from "lucide-react";
+import { Plus, Search, FileText, MoreVertical, Edit, Trash, Download } from "lucide-react";
 import Link from "next/link";
 import {
   DropdownMenu,
@@ -29,13 +29,16 @@ import {
   DialogTitle,
   DialogFooter
 } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PaymentVoucher } from "@/components/payments/PaymentVoucher";
 import { exportToPDF } from "@/lib/export";
+import { exportToExcel } from "@/lib/export-excel";
 import { toast } from "sonner";
 import { Printer } from "lucide-react";
-import { deletePayment } from "@/app/actions/payments";
+import { deletePayment, deletePayments } from "@/app/actions/payments";
 import { format } from "date-fns";
-
+import { Skeleton } from "@/components/ui/skeleton";
+import { Pagination } from "@/components/shared/Pagination";
 import {
   Select,
   SelectContent,
@@ -48,7 +51,12 @@ export default function PaymentsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [payments, setPayments] = useState<any[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [data, setData] = useState<{ items: any[]; total: number; totalPages: number }>({
+    items: [],
+    total: 0,
+    totalPages: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
@@ -57,19 +65,39 @@ export default function PaymentsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
 
+  const [selectedPayments, setSelectedPayments] = useState<string[]>([]);
+  const [isBulkDeleteAlertOpen, setIsBulkDeleteAlertOpen] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+
+  // Debounced fetch when filters or page change
   useEffect(() => {
-    async function loadPayments() {
+    const timer = setTimeout(async () => {
+      setIsLoading(true);
       try {
-        const data = await getPayments();
-        setPayments(data);
+        const result = await getPayments({
+          page: currentPage,
+          search: searchTerm || undefined,
+          dateFilter: dateFilter || undefined,
+          typeFilter,
+        });
+        setData(result);
       } catch (error) {
         toast.error("Failed to load payments.");
       } finally {
         setIsLoading(false);
       }
-    }
-    loadPayments();
-  }, []);
+    }, searchTerm ? 300 : 0);
+    return () => clearTimeout(timer);
+  }, [currentPage, searchTerm, dateFilter, typeFilter]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, dateFilter, typeFilter]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   const handlePrint = async () => {
     if (!selectedPayment) return;
@@ -90,7 +118,7 @@ export default function PaymentsPage() {
     try {
       setIsDeleting(true);
       await deletePayment(selectedPayment.id);
-      setPayments(payments.filter(p => p.id !== selectedPayment.id));
+      setData(prev => ({ ...prev, items: prev.items.filter(p => p.id !== selectedPayment.id), total: prev.total - 1 }));
       toast.success("Payment deleted successfully");
       setIsDeleteAlertOpen(false);
     } catch (error) {
@@ -100,17 +128,42 @@ export default function PaymentsPage() {
     }
   };
 
-  const filteredPayments = payments.filter((payment) => {
-    const matchesSearch =
-      payment.voucherNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.narration?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (payment.eventName?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
+  const handleBulkDelete = async () => {
+    if (selectedPayments.length === 0) return;
+    try {
+      setIsBulkDeleting(true);
+      await deletePayments(selectedPayments);
+      setData(prev => ({ ...prev, items: prev.items.filter(p => !selectedPayments.includes(p.id)), total: prev.total - selectedPayments.length }));
+      setSelectedPayments([]);
+      toast.success("Payments deleted successfully");
+      setIsBulkDeleteAlertOpen(false);
+    } catch (error) {
+      toast.error("Failed to delete payments");
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
 
-    const matchesDate = !dateFilter || new Date(payment.date).toISOString().startsWith(dateFilter);
-    const matchesType = typeFilter === "all" || payment.type === typeFilter;
+  const handleExport = () => {
+    try {
+      const exportData = data.items.map((p) => ({
+        "Voucher No.": p.voucherNo,
+        "Date": format(new Date(p.date), "dd/MM/yyyy"),
+        "Type": p.type,
+        "Event Name": p.eventName && p.eventName !== "None" ? p.eventName : "",
+        "Amount": p.amount,
+        "Payment Mode": p.paymentMode,
+        "Narration": p.narration || "",
+        "Status": "Paid",
+      }));
+      exportToExcel(exportData, `Payments_${format(new Date(), "yyyy-MM-dd")}`);
+      toast.success("Excel exported successfully!");
+    } catch (error) {
+      toast.error("Failed to export Excel.");
+    }
+  };
 
-    return matchesSearch && matchesDate && matchesType;
-  });
+  // No more client-side filteredPayments — filtering is server-side via getPayments()
 
   return (
     <div className="space-y-6 p-4 md:p-8">
@@ -119,11 +172,24 @@ export default function PaymentsPage() {
           <h2 className="text-3xl font-bold tracking-tight">Payments</h2>
           <p className="text-muted-foreground">Track and manage all expense payments</p>
         </div>
-        <Button asChild className="bg-amber-600 hover:bg-amber-700">
-          <Link href="/payments/new">
-            <Plus className="mr-2 h-4 w-4" /> New Payment
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          {selectedPayments.length > 0 && (
+            <Button 
+              variant="destructive" 
+              onClick={() => setIsBulkDeleteAlertOpen(true)}
+            >
+              <Trash className="mr-2 h-4 w-4" /> Delete Selected ({selectedPayments.length})
+            </Button>
+          )}
+          <Button variant="outline" onClick={handleExport} disabled={data.total === 0}>
+            <Download className="mr-2 h-4 w-4" /> Export
+          </Button>
+          <Button asChild className="bg-amber-600 hover:bg-amber-700">
+            <Link href="/payments/new">
+              <Plus className="mr-2 h-4 w-4" /> New Payment
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col md:flex-row items-center gap-4">
@@ -183,6 +249,18 @@ export default function PaymentsPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">
+                <Checkbox 
+                  checked={data.items.length > 0 && selectedPayments.length === data.items.length}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedPayments(data.items.map(p => p.id));
+                    } else {
+                      setSelectedPayments([]);
+                    }
+                  }}
+                />
+              </TableHead>
               <TableHead>Voucher No.</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Type</TableHead>
@@ -195,16 +273,59 @@ export default function PaymentsPage() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton className="h-4 w-4" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-12" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                </TableRow>
+              ))
+            ) : data.items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-10">Loading payments...</TableCell>
-              </TableRow>
-            ) : filteredPayments.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">No payments found matching the filters.</TableCell>
+                <TableCell colSpan={9} className="text-center py-16">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                      <Search className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-base font-semibold text-foreground">No payments found</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {searchTerm || dateFilter || typeFilter !== "all"
+                          ? "Try adjusting your search or filters."
+                          : "Create your first payment to get started."}
+                      </p>
+                    </div>
+                    {!searchTerm && !dateFilter && typeFilter === "all" && (
+                      <Button asChild className="mt-2 bg-amber-600 hover:bg-amber-700">
+                        <Link href="/payments/new">
+                          <Plus className="mr-2 h-4 w-4" /> New Payment
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
               </TableRow>
             ) : (
-              filteredPayments.map((payment) => (
+              data.items.map((payment) => (
                 <TableRow key={payment.id}>
+                  <TableCell>
+                    <Checkbox 
+                      checked={selectedPayments.includes(payment.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedPayments([...selectedPayments, payment.id]);
+                        } else {
+                          setSelectedPayments(selectedPayments.filter(id => id !== payment.id));
+                        }
+                      }}
+                    />
+                  </TableCell>
                   <TableCell className="font-medium text-amber-600">{payment.voucherNo}</TableCell>
                   <TableCell>{format(new Date(payment.date), "dd/MM/yyyy")}</TableCell>
                   <TableCell>
@@ -264,6 +385,14 @@ export default function PaymentsPage() {
         </Table>
       </div>
 
+      <Pagination
+        currentPage={currentPage}
+        totalPages={data.totalPages}
+        total={data.total}
+        pageSize={20}
+        onPageChange={handlePageChange}
+      />
+
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -298,12 +427,6 @@ export default function PaymentsPage() {
               {selectedPayment && <span className="font-bold"> {selectedPayment.voucherNo}</span>} and remove its data from our servers.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-muted-foreground">
-              This action cannot be undone. This will permanently delete the payment
-              {selectedPayment && <span className="font-bold"> {selectedPayment.voucherNo}</span>} and remove its data from our servers.
-            </p>
-          </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setIsDeleteAlertOpen(false)}>
               Cancel
@@ -314,6 +437,34 @@ export default function PaymentsPage() {
               disabled={isDeleting}
             >
               {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isBulkDeleteAlertOpen} onOpenChange={setIsBulkDeleteAlertOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Are you absolutely sure?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete {selectedPayments.length} selected payments and remove their data from our servers.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              This action cannot be undone. This will permanently delete {selectedPayments.length} selected payments and remove their data from our servers.
+            </p>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsBulkDeleteAlertOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleBulkDelete}
+              variant="destructive"
+              disabled={isBulkDeleting}
+            >
+              {isBulkDeleting ? "Deleting..." : "Delete All"}
             </Button>
           </DialogFooter>
         </DialogContent>

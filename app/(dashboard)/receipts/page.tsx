@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, FileText, MoreVertical, Printer, Edit, Trash } from "lucide-react";
+import { Plus, Search, FileText, MoreVertical, Printer, Edit, Trash, Download } from "lucide-react";
 import Link from "next/link";
 import {
   Select,
@@ -38,16 +38,24 @@ import {
 } from "@/components/ui/dialog";
 import { ReceiptVoucher } from "@/components/receipts/ReceiptVoucher";
 import { exportToPDF } from "@/lib/export";
+import { exportToExcel } from "@/lib/export-excel";
 import { toast } from "sonner";
 import { deleteReceipt, deleteReceipts } from "@/app/actions/receipts";
 import { format } from "date-fns";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Pagination } from "@/components/shared/Pagination";
 
 export default function ReceiptsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [receipts, setReceipts] = useState<any[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [data, setData] = useState<{ items: any[]; total: number; totalPages: number }>({
+    items: [],
+    total: 0,
+    totalPages: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   const [selectedReceipt, setSelectedReceipt] = useState<any>(null);
@@ -60,19 +68,35 @@ export default function ReceiptsPage() {
   const [isBulkDeleteAlertOpen, setIsBulkDeleteAlertOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
+  // Debounced fetch when filters or page change
   useEffect(() => {
-    async function loadReceipts() {
+    const timer = setTimeout(async () => {
+      setIsLoading(true);
       try {
-        const data = await getReceipts();
-        setReceipts(data);
+        const result = await getReceipts({
+          page: currentPage,
+          search: searchTerm || undefined,
+          dateFilter: dateFilter || undefined,
+          typeFilter,
+        });
+        setData(result);
       } catch (error) {
         toast.error("Failed to load receipts.");
       } finally {
         setIsLoading(false);
       }
-    }
-    loadReceipts();
-  }, []);
+    }, searchTerm ? 300 : 0);
+    return () => clearTimeout(timer);
+  }, [currentPage, searchTerm, dateFilter, typeFilter]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, dateFilter, typeFilter]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   const handlePrint = async () => {
     if (!selectedReceipt) return;
@@ -93,7 +117,7 @@ export default function ReceiptsPage() {
     try {
       setIsDeleting(true);
       await deleteReceipt(selectedReceipt.id);
-      setReceipts(receipts.filter(r => r.id !== selectedReceipt.id));
+      setData(prev => ({ ...prev, items: prev.items.filter(r => r.id !== selectedReceipt.id), total: prev.total - 1 }));
       toast.success("Receipt deleted successfully");
       setIsDeleteAlertOpen(false);
     } catch (error) {
@@ -108,7 +132,7 @@ export default function ReceiptsPage() {
     try {
       setIsBulkDeleting(true);
       await deleteReceipts(selectedReceipts);
-      setReceipts(receipts.filter(r => !selectedReceipts.includes(r.id)));
+      setData(prev => ({ ...prev, items: prev.items.filter(r => !selectedReceipts.includes(r.id)), total: prev.total - selectedReceipts.length }));
       setSelectedReceipts([]);
       toast.success("Receipts deleted successfully");
       setIsBulkDeleteAlertOpen(false);
@@ -119,18 +143,25 @@ export default function ReceiptsPage() {
     }
   };
 
-  const filteredReceipts = receipts.filter((receipt) => {
-    const matchesSearch = 
-      receipt.receiptNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      receipt.donor?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      receipt.narration?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (receipt.eventName?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
-    
-    const matchesDate = !dateFilter || new Date(receipt.date).toISOString().startsWith(dateFilter);
-    const matchesType = typeFilter === "all" || receipt.type === typeFilter;
+  const handleExport = () => {
+    try {
+      const exportData = data.items.map((r) => ({
+        "Receipt No.": r.receiptNo,
+        "Date": format(new Date(r.date), "dd/MM/yyyy"),
+        "Donor": r.donor?.name || "Anonymous",
+        "Type": r.type,
+        "Event Name": r.eventName && r.eventName !== "None" ? r.eventName : "",
+        "Amount": r.amount,
+        "Payment Mode": r.paymentMode,
+        "Narration": r.narration || "",
+      }));
+      exportToExcel(exportData, `Receipts_${format(new Date(), "yyyy-MM-dd")}`);
+      toast.success("Excel exported successfully!");
+    } catch (error) {
+      toast.error("Failed to export Excel.");
+    }
+  };
 
-    return matchesSearch && matchesDate && matchesType;
-  });
 
   return (
     <div className="space-y-6 p-4 md:p-8">
@@ -148,6 +179,9 @@ export default function ReceiptsPage() {
               <Trash className="mr-2 h-4 w-4" /> Delete Selected ({selectedReceipts.length})
             </Button>
           )}
+          <Button variant="outline" onClick={handleExport} disabled={data.total === 0}>
+            <Download className="mr-2 h-4 w-4" /> Export
+          </Button>
           <Button asChild className="bg-emerald-600 hover:bg-emerald-700">
             <Link href="/receipts/new">
               <Plus className="mr-2 h-4 w-4" /> New Receipt
@@ -206,10 +240,10 @@ export default function ReceiptsPage() {
             <TableRow>
               <TableHead className="w-12">
                 <Checkbox 
-                  checked={filteredReceipts.length > 0 && selectedReceipts.length === filteredReceipts.length}
+                  checked={data.items.length > 0 && selectedReceipts.length === data.items.length}
                   onCheckedChange={(checked) => {
                     if (checked) {
-                      setSelectedReceipts(filteredReceipts.map(r => r.id));
+                      setSelectedReceipts(data.items.map(r => r.id));
                     } else {
                       setSelectedReceipts([]);
                     }
@@ -229,15 +263,47 @@ export default function ReceiptsPage() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton className="h-4 w-4" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-28" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                </TableRow>
+              ))
+            ) : data.items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-10">Loading receipts...</TableCell>
-              </TableRow>
-            ) : filteredReceipts.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={10} className="text-center py-10 text-muted-foreground">No receipts found matching the filters.</TableCell>
+                <TableCell colSpan={10} className="text-center py-16">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                      <Search className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-base font-semibold text-foreground">No receipts found</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {searchTerm || dateFilter || typeFilter !== "all"
+                          ? "Try adjusting your search or filters."
+                          : "Create your first receipt to get started."}
+                      </p>
+                    </div>
+                    {!searchTerm && !dateFilter && typeFilter === "all" && (
+                      <Button asChild className="mt-2 bg-emerald-600 hover:bg-emerald-700">
+                        <Link href="/receipts/new">
+                          <Plus className="mr-2 h-4 w-4" /> New Receipt
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
               </TableRow>
             ) : (
-              filteredReceipts.map((receipt) => (
+              data.items.map((receipt) => (
                 <TableRow key={receipt.id}>
                   <TableCell>
                     <Checkbox 
@@ -313,12 +379,20 @@ export default function ReceiptsPage() {
         </Table>
       </div>
 
+      <Pagination
+        currentPage={currentPage}
+        totalPages={data.totalPages}
+        total={data.total}
+        pageSize={20}
+        onPageChange={handlePageChange}
+      />
+
       <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-<DialogHeader>
-             <DialogTitle>Receipt Preview</DialogTitle>
-             <DialogDescription>Preview of receipt details.</DialogDescription>
-           </DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Receipt Preview</DialogTitle>
+            <DialogDescription>Preview of receipt details.</DialogDescription>
+          </DialogHeader>
           <div className="flex justify-center p-4 bg-muted/30 rounded-lg overflow-x-auto">
             {selectedReceipt && <ReceiptVoucher receipt={selectedReceipt} />}
           </div>
@@ -340,19 +414,13 @@ export default function ReceiptsPage() {
 
       <Dialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
         <DialogContent>
-<DialogHeader>
-             <DialogTitle>Are you absolutely sure?</DialogTitle>
-             <DialogDescription>
-               This action cannot be undone. This will permanently delete the receipt
-               {selectedReceipt && <span className="font-bold"> {selectedReceipt.receiptNo}</span>} and remove its data from our servers.
-             </DialogDescription>
-           </DialogHeader>
-           <div className="py-4">
-             <p className="text-sm text-muted-foreground">
-               This action cannot be undone. This will permanently delete the receipt
-               {selectedReceipt && <span className="font-bold"> {selectedReceipt.receiptNo}</span>} and remove its data from our servers.
-             </p>
-           </div>
+          <DialogHeader>
+            <DialogTitle>Are you absolutely sure?</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete the receipt
+              {selectedReceipt && <span className="font-bold"> {selectedReceipt.receiptNo}</span>} and remove its data from our servers.
+            </DialogDescription>
+          </DialogHeader>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setIsDeleteAlertOpen(false)}>
               Cancel
@@ -376,11 +444,6 @@ export default function ReceiptsPage() {
               This action cannot be undone. This will permanently delete {selectedReceipts.length} selected receipts and remove their data from our servers.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-muted-foreground">
-              This action cannot be undone. This will permanently delete {selectedReceipts.length} selected receipts and remove their data from our servers.
-            </p>
-          </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setIsBulkDeleteAlertOpen(false)}>
               Cancel
