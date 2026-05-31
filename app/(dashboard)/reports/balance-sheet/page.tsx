@@ -22,7 +22,7 @@ export default function BalanceSheetPage() {
   const loadBalanceSheet = async () => {
     setIsLoading(true);
     try {
-      const result = await getBalanceSheet(startDateStr, endDateStr);
+      const result = await getBalanceSheet(endDateStr);
       setData(result);
     } catch (error) {
       // TODO(security): Do not expose error details to the client.

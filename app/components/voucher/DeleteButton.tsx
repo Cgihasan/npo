@@ -1,13 +1,15 @@
+"use client";
+
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from '@/lib/auth'; // adjust import as needed
+import { useSession } from 'next-auth/react';
 import { clearVouchers, requestVoucherDeletion } from '@/app/actions/voucherAdmin';
 import { Shield, Trash2 } from 'lucide-react';
 
 export default function DeleteButton() {
   const router = useRouter();
-  const session = useSession();
-  const isAdmin = session?.user?.role === 'ADMIN';
+  const { data: sessionData } = useSession();
+  const isAdmin = (sessionData?.user as any)?.role === 'ADMIN';
 
   const handleDelete = async () => {
     if (isAdmin) {
