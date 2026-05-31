@@ -1,5 +1,5 @@
 services:
-  # Next.js serves both Frontend (React) and Backend (Server Actions/Prisma) on the same port
+  # Next.js serves both Frontend (React) and Backend (Server Actions/Prisma) on the same por
   - domain: npo-app
     port: 3000
     target_path: /
