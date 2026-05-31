@@ -155,6 +155,19 @@ export async function updateJournalVoucher(id: string, data: {
 export async function deleteJournalVoucher(id: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
+  if (!id) throw new Error("Journal voucher ID is required");
+
+  if ((session.user as any).role !== "ADMIN") {
+    await db.deletionRequest.create({
+      data: {
+        voucherId: id,
+        voucherType: "JOURNAL",
+        requestedById: (session.user as any).id,
+        status: "PENDING",
+      },
+    });
+    return { success: true, requested: true };
+  }
 
   await db.$transaction(async (tx) => {
     // Delete associated transactions first

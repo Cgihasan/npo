@@ -145,8 +145,8 @@ export default function AuditLogPage() {
         </Button>
       </div>
 
-      <div className="flex gap-4">
-        <div className="rounded-xl border border-border/50 bg-card p-4 flex-1">
+      <div className="grid grid-cols-2 md:flex gap-4">
+        <div className="rounded-xl border border-border/50 bg-card p-4 flex-1 min-w-[120px]">
           <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">Total Events</p>
           <p className="text-2xl font-bold mt-1">{logs.length}</p>
         </div>
@@ -179,7 +179,7 @@ export default function AuditLogPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

@@ -209,6 +209,20 @@ export async function deletePayment(id: string) {
   if (!session) throw new Error("Unauthorized");
   if (!id) throw new Error("Payment ID is required");
 
+  // Non-admin users should create a DeletionRequest instead of deleting directly
+  if ((session.user as any).role !== 'ADMIN') {
+    await db.deletionRequest.create({
+      data: {
+        voucherId: id,
+        voucherType: 'PAYMENT',
+        requestedById: (session.user as any).id,
+        status: 'PENDING',
+      },
+    });
+
+    return { success: true, requested: true };
+  }
+
   await db.$transaction(async (tx) => {
     await tx.transaction.deleteMany({
       where: {
@@ -230,6 +244,24 @@ export async function deletePayment(id: string) {
 export async function deletePayments(ids: string[]) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
+
+  // If any non-admin user calls bulk delete, create requests for each id
+  if ((session.user as any).role !== 'ADMIN') {
+    await db.$transaction(async (tx) => {
+      for (const id of ids) {
+        await tx.deletionRequest.create({
+          data: {
+            voucherId: id,
+            voucherType: 'PAYMENT',
+            requestedById: (session.user as any).id,
+            status: 'PENDING',
+          },
+        });
+      }
+    });
+
+    return { success: true, requested: true };
+  }
 
   await db.$transaction(async (tx) => {
     await tx.transaction.deleteMany({

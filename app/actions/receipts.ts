@@ -188,6 +188,19 @@ export async function updateReceipt(id: string, data: any) {
 export async function deleteReceipt(id: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
+  if (!id) throw new Error("Receipt ID is required");
+
+  if ((session.user as any).role !== "ADMIN") {
+    await db.deletionRequest.create({
+      data: {
+        voucherId: id,
+        voucherType: "RECEIPT",
+        requestedById: (session.user as any).id,
+        status: "PENDING",
+      },
+    });
+    return { success: true, requested: true };
+  }
 
   await db.$transaction(async (tx) => {
     // Delete associated transactions first
@@ -212,6 +225,23 @@ export async function deleteReceipt(id: string) {
 export async function deleteReceipts(ids: string[]) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
+  if (ids.length === 0) return { success: true };
+
+  if ((session.user as any).role !== "ADMIN") {
+    await db.$transaction(async (tx) => {
+      for (const id of ids) {
+        await tx.deletionRequest.create({
+          data: {
+            voucherId: id,
+            voucherType: "RECEIPT",
+            requestedById: (session.user as any).id,
+            status: "PENDING",
+          },
+        });
+      }
+    });
+    return { success: true, requested: true };
+  }
 
   await db.$transaction(async (tx) => {
     // Delete associated transactions first

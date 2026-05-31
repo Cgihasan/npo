@@ -152,7 +152,7 @@ export function BudgetForm({ initialData, onSuccess, onCancel, submitAction }: B
         />
       </div>
 
-      <div className="flex justify-end gap-2 pt-4">
+      <div className="flex justify-end gap-2 pt-4 flex-wrap">
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>

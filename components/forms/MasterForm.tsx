@@ -53,7 +53,7 @@ export function MasterForm({ type, initialData, onSuccess, onCancel, submitActio
         <Label htmlFor="phone">Phone</Label>
         <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone number" />
       </div>
-      <div className="flex justify-end gap-2 pt-4">
+      <div className="flex justify-end gap-2 pt-4 flex-wrap">
         <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
         <Button type="submit" disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
           {isSubmitting ? "Saving..." : initialData ? `Update ${type}` : `Create ${type}`}

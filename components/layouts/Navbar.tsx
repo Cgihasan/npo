@@ -1,6 +1,6 @@
 "use client";
 
-import { Sun, Moon, Bell, LogOut } from 'lucide-react';
+import { Sun, Moon, Bell, LogOut, Menu } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { signOut } from 'next-auth/react';
@@ -10,10 +10,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
+import { useSidebar } from './SidebarContext';
 
 export default function Navbar({ user }: { user?: any }) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const { toggle } = useSidebar();
 
   useEffect(() => {
     setMounted(true);
@@ -22,9 +24,18 @@ export default function Navbar({ user }: { user?: any }) {
   const pageTitle = 'Aqaba Trust';
 
   return (
-    <header className="sticky top-0 right-0 z-40 flex items-center justify-between h-16 px-8 border-b border-border bg-background/80 backdrop-blur-xl">
-      <h2 className="text-2xl font-bold tracking-tight">{pageTitle}</h2>
-      <div className="flex items-center gap-4">
+    <header className="sticky top-0 right-0 z-30 flex items-center justify-between h-16 px-4 md:px-8 border-b border-border bg-background/80 backdrop-blur-xl">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={toggle}
+          className="lg:hidden p-2 rounded-lg hover:bg-accent transition-colors"
+          aria-label="Toggle sidebar"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <h2 className="text-xl md:text-2xl font-bold tracking-tight">{pageTitle}</h2>
+      </div>
+      <div className="flex items-center gap-2 md:gap-4">
         <button
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
           className="p-2 rounded-full hover:bg-accent transition-all"
@@ -42,8 +53,8 @@ export default function Navbar({ user }: { user?: any }) {
         {user && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button type="button" className="flex items-center gap-3 border-l border-border pl-4 cursor-pointer">
-                <div className="text-right">
+              <button type="button" className="flex items-center gap-2 md:gap-3 border-l border-border pl-3 md:pl-4 cursor-pointer">
+                <div className="text-right hidden sm:block">
                   <p className="text-sm font-semibold">{user.name ?? user.email}</p>
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Principal</p>
                 </div>

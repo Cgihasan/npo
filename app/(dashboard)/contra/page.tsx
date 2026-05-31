@@ -81,9 +81,13 @@ export default function ContraPage() {
     if (!selectedEntry) return;
     try {
       setIsDeleting(true);
-      await deleteContra(selectedEntry.id);
-      setData(prev => ({ ...prev, items: prev.items.filter(e => e.id !== selectedEntry.id), total: prev.total - 1 }));
-      toast.success("Contra entry deleted successfully");
+      const res = await deleteContra(selectedEntry.id);
+      if (res.requested) {
+        toast.success("Deletion request submitted for admin approval");
+      } else {
+        setData(prev => ({ ...prev, items: prev.items.filter(entry => entry.id !== selectedEntry.id), total: prev.total - 1 }));
+        toast.success("Contra entry deleted successfully");
+      }
       setIsDeleteAlertOpen(false);
     } catch (error) {
       toast.error("Failed to delete contra entry");
@@ -119,7 +123,7 @@ export default function ContraPage() {
           <h2 className="text-3xl font-bold tracking-tight">Contra Entries</h2>
           <p className="text-muted-foreground">Transfer money between your own accounts.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" onClick={handleExport} disabled={data.total === 0}>
             <Download className="mr-2 h-4 w-4" /> Export
           </Button>
@@ -148,7 +152,7 @@ export default function ContraPage() {
         )}
       </div>
 
-      <div className="rounded-md border bg-card shadow-sm">
+      <div className="rounded-md border bg-card shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

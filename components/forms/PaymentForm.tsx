@@ -470,7 +470,7 @@ export function PaymentForm({ initialData }: PaymentFormProps) {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end gap-4">
+        <div className="flex justify-end gap-4 flex-wrap">
           <Button variant="outline" type="button" onClick={() => router.back()}>
             Cancel
           </Button>

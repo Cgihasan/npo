@@ -173,3 +173,52 @@ export async function replacePaymentLedgerEntries(
   });
   await postPaymentLedgerEntries(tx, params);
 }
+
+/** Credit from account, debit to account — standard contra transfer. */
+export async function postContraLedgerEntries(
+  tx: Tx,
+  params: {
+    contraId: string;
+    date: Date;
+    amount: number;
+    fromAccountId: string;
+    toAccountId: string;
+  }
+) {
+  await tx.transaction.createMany({
+    data: [
+      {
+        accountId: params.fromAccountId,
+        debit: 0,
+        credit: params.amount,
+        refType: "CONTRA",
+        refId: params.contraId,
+        date: params.date,
+      },
+      {
+        accountId: params.toAccountId,
+        debit: params.amount,
+        credit: 0,
+        refType: "CONTRA",
+        refId: params.contraId,
+        date: params.date,
+      },
+    ],
+  });
+}
+
+export async function replaceContraLedgerEntries(
+  tx: Tx,
+  params: {
+    contraId: string;
+    date: Date;
+    amount: number;
+    fromAccountId: string;
+    toAccountId: string;
+  }
+) {
+  await tx.transaction.deleteMany({
+    where: { refId: params.contraId, refType: "CONTRA" },
+  });
+  await postContraLedgerEntries(tx, params);
+}

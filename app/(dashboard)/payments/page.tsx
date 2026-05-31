@@ -117,9 +117,13 @@ export default function PaymentsPage() {
     if (!selectedPayment) return;
     try {
       setIsDeleting(true);
-      await deletePayment(selectedPayment.id);
-      setData(prev => ({ ...prev, items: prev.items.filter(p => p.id !== selectedPayment.id), total: prev.total - 1 }));
-      toast.success("Payment deleted successfully");
+      const res = await deletePayment(selectedPayment.id);
+      if (res.requested) {
+        toast.success("Deletion request submitted for admin approval");
+      } else {
+        setData(prev => ({ ...prev, items: prev.items.filter(p => p.id !== selectedPayment.id), total: prev.total - 1 }));
+        toast.success("Payment deleted successfully");
+      }
       setIsDeleteAlertOpen(false);
     } catch (error) {
       toast.error("Failed to delete payment");
@@ -132,10 +136,15 @@ export default function PaymentsPage() {
     if (selectedPayments.length === 0) return;
     try {
       setIsBulkDeleting(true);
-      await deletePayments(selectedPayments);
-      setData(prev => ({ ...prev, items: prev.items.filter(p => !selectedPayments.includes(p.id)), total: prev.total - selectedPayments.length }));
-      setSelectedPayments([]);
-      toast.success("Payments deleted successfully");
+      const res = await deletePayments(selectedPayments);
+      if (res.requested) {
+        toast.success("Bulk deletion requests submitted for admin approval");
+        setSelectedPayments([]);
+      } else {
+        setData(prev => ({ ...prev, items: prev.items.filter(p => !selectedPayments.includes(p.id)), total: prev.total - selectedPayments.length }));
+        setSelectedPayments([]);
+        toast.success("Payments deleted successfully");
+      }
       setIsBulkDeleteAlertOpen(false);
     } catch (error) {
       toast.error("Failed to delete payments");
@@ -172,7 +181,7 @@ export default function PaymentsPage() {
           <h2 className="text-3xl font-bold tracking-tight">Payments</h2>
           <p className="text-muted-foreground">Track and manage all expense payments</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {selectedPayments.length > 0 && (
             <Button 
               variant="destructive" 

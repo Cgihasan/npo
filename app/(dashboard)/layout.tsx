@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { SidebarProvider } from "@/components/layouts/SidebarContext";
 import Sidebar from "@/components/layouts/Sidebar";
 import Navbar from "@/components/layouts/Navbar";
 
@@ -17,14 +18,16 @@ export default async function DashboardLayout({
   const role = (session.user as any)?.role;
 
   return (
-    <div className="min-h-screen bg-background text-foreground" suppressHydrationWarning>
-      <Sidebar role={role} />
-      <div className="ml-64 flex flex-col min-h-screen">
-        <Navbar user={session.user} />
-        <main className="flex-1 overflow-auto">
-          <PageTransition>{children}</PageTransition>
-        </main>
+    <SidebarProvider>
+      <div className="min-h-screen bg-background text-foreground" suppressHydrationWarning>
+        <Sidebar role={role} />
+        <div className="lg:ml-64 flex flex-col min-h-screen">
+          <Navbar user={session.user} />
+          <main className="flex-1 overflow-auto">
+            <PageTransition>{children}</PageTransition>
+          </main>
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }

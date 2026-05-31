@@ -78,6 +78,11 @@ model Receipt {
   attachment  String?
   createdAt   DateTime @default(now())
   donor       Donor?   @relation(fields: [donorId], references: [id])
+
+  @@index([date])
+  @@index([accountId])
+  @@index([donorId])
+  @@index([receiptNo])
 }
 
 model Payment {
@@ -97,6 +102,10 @@ model Payment {
   attachment  String?
   status      String   @default("PENDING")
   createdAt   DateTime @default(now())
+
+  @@index([date])
+  @@index([accountId])
+  @@index([voucherNo])
 }
 
 model ContraEntry {
@@ -110,6 +119,10 @@ model ContraEntry {
   reference     String?
   narration     String?
   createdAt     DateTime @default(now())
+
+  @@index([date])
+  @@index([fromAccountId])
+  @@index([toAccountId])
 }
 
 model Transaction {
@@ -122,6 +135,11 @@ model Transaction {
   date      DateTime
   createdAt DateTime @default(now())
   account   Account  @relation(fields: [accountId], references: [id])
+
+  @@index([refId, refType])
+  @@index([accountId, date])
+  @@index([date])
+  @@index([accountId])
 }
 
 model Budget {
@@ -145,6 +163,9 @@ model JournalVoucher {
   narration   String?
   attachment  String?
   createdAt   DateTime @default(now())
+
+  @@index([date])
+  @@index([voucherNo])
 }
 
 model AuditLog {
@@ -162,4 +183,33 @@ model AuditLog {
   @@index([action])
   @@index([performedById])
   @@index([createdAt])
+}
+// Enum for deletion request status
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Voucher types for targeted deletion (nullable for safe migration)
+enum VoucherType {
+  RECEIPT
+  PAYMENT
+  CONTRA
+  JOURNAL
+}
+
+// Model for tracking voucher deletion requests
+model DeletionRequest {
+  id            String   @id @default(cuid())
+  voucherId     String
+  voucherType   VoucherType?
+  requestedById String
+  status        RequestStatus @default(PENDING)
+  createdAt     DateTime @default(now())
+
+  // Relations (optional, can be added later)
+  // requestedBy   User @relation(fields: [requestedById], references: [id])
+
+  @@index([voucherId])
 }

@@ -30,7 +30,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
+    <div className="flex min-h-screen items-center justify-center bg-background" suppressHydrationWarning>
       <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4 rounded-lg bg-card p-6 shadow-lg">
         <h1 className="text-2xl font-semibold text-foreground">Login</h1>
         {error && <p className="text-sm text-destructive">{error}</p>}

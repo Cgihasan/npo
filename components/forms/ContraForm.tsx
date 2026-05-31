@@ -29,7 +29,7 @@ import { motion } from "framer-motion";
 
 import { useEffect, useState } from "react";
 import { getAssetAccounts } from "@/app/actions/masters";
-import { createContra, updateContra } from "@/app/actions/contra";
+import { createContra, updateContra, getNextContraNumber } from "@/app/actions/contra";
 
 const contraFormSchema = z.object({
   entryNo: z.string(),
@@ -81,7 +81,7 @@ export function ContraForm({ initialData }: ContraFormProps) {
   const form = useForm<ContraFormValues>({
     resolver: zodResolver(contraFormSchema),
     defaultValues: {
-      entryNo: initialData?.entryNo || `CON-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+      entryNo: initialData?.entryNo || "",
       date: initialData?.date 
         ? new Date(initialData.date).toISOString().split('T')[0] 
         : new Date().toISOString().split('T')[0],
@@ -95,6 +95,21 @@ export function ContraForm({ initialData }: ContraFormProps) {
   });
 
   const transferType = form.watch("transferType");
+  const selectedDate = form.watch("date");
+
+  useEffect(() => {
+    async function updateContraNo() {
+      if (selectedDate && !initialData) {
+        try {
+          const nextEntryNo = await getNextContraNumber(selectedDate);
+          form.setValue("entryNo", nextEntryNo);
+        } catch (error) {
+          console.error("Failed to fetch contra entry number:", error);
+        }
+      }
+    }
+    updateContraNo();
+  }, [selectedDate, form, initialData]);
 
   async function onSubmit(data: ContraFormValues) {
     try {
@@ -108,7 +123,7 @@ export function ContraForm({ initialData }: ContraFormProps) {
       }
       router.push("/contra");
       router.refresh();
-    } catch (error) {
+    } catch (error: any) {
       toast.error(initialData?.id ? "Failed to update contra entry." : "Failed to save contra entry.");
     } finally {
       setIsSubmitting(false);
@@ -266,7 +281,7 @@ export function ContraForm({ initialData }: ContraFormProps) {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end gap-4">
+        <div className="flex justify-end gap-4 flex-wrap">
           <Button variant="outline" type="button" onClick={() => router.back()}>
             Cancel
           </Button>

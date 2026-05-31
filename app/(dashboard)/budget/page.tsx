@@ -40,6 +40,7 @@ import {
 import { BudgetForm } from "@/components/forms/BudgetForm";
 import { createBudget, updateBudget } from "@/app/actions/budgets";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 
 export default function BudgetPage() {
   const [budgets, setBudgets] = useState<any[]>([]);
@@ -162,12 +163,11 @@ export default function BudgetPage() {
       {/* Search */}
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <input
-          type="text"
+        <Input
           placeholder="Search budgets..."
+          className="pl-9 rounded-full"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full bg-card border border-border rounded-full py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow"
         />
       </div>
 

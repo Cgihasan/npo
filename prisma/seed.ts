@@ -11,6 +11,7 @@ async function main() {
   await prisma.receipt.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.contraEntry.deleteMany();
+  await prisma.journalVoucher.deleteMany();
   await prisma.donor.deleteMany();
   await prisma.vendor.deleteMany();
   await prisma.account.deleteMany();
@@ -127,6 +128,175 @@ async function main() {
       { name: "City Utilities", email: "support@cityutilities.com" },
     ],
   });
+
+  // 5. Create sample voucher entries and matching ledger transactions
+  const cashAccount = await prisma.account.findFirst({
+    where: { accountType: "Cash In Hand" },
+  });
+  const bankAccount = await prisma.account.findFirst({
+    where: { accountType: "City Union Bank" },
+  });
+  const generalDonation = await prisma.account.findFirst({
+    where: { accountType: "General Donation" },
+  });
+  const officeRent = await prisma.account.findFirst({
+    where: { accountType: "Office Rent" },
+  });
+  const officeStationery = await prisma.account.findFirst({
+    where: { accountType: "Office Stationery" },
+  });
+  const bankCharges = await prisma.account.findFirst({
+    where: { accountType: "Bank Charges" },
+  });
+  const sampleDonor = await prisma.donor.findFirst({
+    where: { name: "Mohamed Hasan" },
+  });
+
+  if (cashAccount && bankAccount && generalDonation && officeRent && officeStationery && bankCharges && sampleDonor) {
+    const receipt = await prisma.receipt.create({
+      data: {
+        receiptNo: "RCP-2026-001",
+        date: new Date("2026-05-01"),
+        donorId: sampleDonor.id,
+        type: "General Donation",
+        category: "Direct Incomes",
+        accountType: "General Donation",
+        eventName: "None",
+        amount: 15000,
+        paymentMode: "Cash",
+        referenceNo: "TXN001",
+        accountId: cashAccount.id,
+        narration: "Donation received in cash.",
+      },
+    });
+
+    const payment = await prisma.payment.create({
+      data: {
+        voucherNo: "PV-2026-001",
+        date: new Date("2026-05-05"),
+        type: "Office Rent",
+        category: "Indirect Expenses",
+        accountType: "Office Rent",
+        amount: 5000,
+        paymentMode: "Bank Transfer",
+        chequeNo: "CHQ12345",
+        bankName: "City Union Bank",
+        accountId: bankAccount.id,
+        narration: "Monthly office rent payment.",
+      },
+    });
+
+    const contra = await prisma.contraEntry.create({
+      data: {
+        entryNo: "CON-2026-001",
+        date: new Date("2026-05-10"),
+        transferType: "CASH_TO_BANK",
+        fromAccountId: cashAccount.id,
+        toAccountId: bankAccount.id,
+        amount: 7000,
+        reference: "Deposit slip 123",
+        narration: "Cash deposit to bank.",
+      },
+    });
+
+    const journalVoucher = await prisma.journalVoucher.create({
+      data: {
+        voucherNo: "JV-2026-001",
+        date: new Date("2026-05-12"),
+        narration: "Stationery purchase and bank charges allocation.",
+      },
+    });
+
+    await prisma.transaction.createMany({
+      data: [
+        {
+          accountId: cashAccount.id,
+          debit: 15000,
+          credit: 0,
+          refType: "RECEIPT",
+          refId: receipt.id,
+          date: new Date("2026-05-01"),
+        },
+        {
+          accountId: generalDonation.id,
+          debit: 0,
+          credit: 15000,
+          refType: "RECEIPT",
+          refId: receipt.id,
+          date: new Date("2026-05-01"),
+        },
+        {
+          accountId: officeRent.id,
+          debit: 5000,
+          credit: 0,
+          refType: "PAYMENT",
+          refId: payment.id,
+          date: new Date("2026-05-05"),
+        },
+        {
+          accountId: bankAccount.id,
+          debit: 0,
+          credit: 5000,
+          refType: "PAYMENT",
+          refId: payment.id,
+          date: new Date("2026-05-05"),
+        },
+        {
+          accountId: cashAccount.id,
+          debit: 0,
+          credit: 7000,
+          refType: "CONTRA",
+          refId: contra.id,
+          date: new Date("2026-05-10"),
+        },
+        {
+          accountId: bankAccount.id,
+          debit: 7000,
+          credit: 0,
+          refType: "CONTRA",
+          refId: contra.id,
+          date: new Date("2026-05-10"),
+        },
+        {
+          accountId: officeStationery.id,
+          debit: 1200,
+          credit: 0,
+          refType: "JOURNAL",
+          refId: journalVoucher.id,
+          date: new Date("2026-05-12"),
+        },
+        {
+          accountId: bankCharges.id,
+          debit: 300,
+          credit: 0,
+          refType: "JOURNAL",
+          refId: journalVoucher.id,
+          date: new Date("2026-05-12"),
+        },
+        {
+          accountId: bankAccount.id,
+          debit: 0,
+          credit: 1500,
+          refType: "JOURNAL",
+          refId: journalVoucher.id,
+          date: new Date("2026-05-12"),
+        },
+      ],
+    });
+
+    // Calculate balances from transactions
+    const accounts = [cashAccount, bankAccount, generalDonation, officeRent, officeStationery, bankCharges];
+    for (const account of accounts) {
+      const transactions = await prisma.transaction.findMany({
+        where: { accountId: account.id },
+      });
+      const balance = transactions.reduce((sum, t) => sum + t.debit - t.credit, 0);
+      await prisma.account.update({
+        where: { id: account.id },
+        data: { balance },
+      });
+    }
+  }
 
   console.log("Seed data created successfully!");
 }

@@ -308,7 +308,7 @@ export function JournalVoucherForm({
         </CardContent>
       </Card>
 
-      <div className="flex justify-end gap-4">
+      <div className="flex justify-end gap-4 flex-wrap">
         <Button 
           type="submit" 
           className="bg-blue-600 hover:bg-blue-700" 

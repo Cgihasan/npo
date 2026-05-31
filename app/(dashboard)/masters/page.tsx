@@ -112,11 +112,13 @@ export default function MastersPage() {
       </div>
 
       <Tabs defaultValue="donors" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="donors">Donors</TabsTrigger>
-          <TabsTrigger value="vendors">Vendors</TabsTrigger>
-          <TabsTrigger value="accounts">Accounts</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto pb-1">
+          <TabsList className="w-full sm:w-auto">
+            <TabsTrigger value="donors" className="flex-1 sm:flex-none">Donors</TabsTrigger>
+            <TabsTrigger value="vendors" className="flex-1 sm:flex-none">Vendors</TabsTrigger>
+            <TabsTrigger value="accounts" className="flex-1 sm:flex-none">Accounts</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="donors">
           <Card>
@@ -129,7 +131,7 @@ export default function MastersPage() {
                 <Plus className="mr-2 h-4 w-4" /> Add Donor
               </Button>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -189,7 +191,7 @@ export default function MastersPage() {
                 <Plus className="mr-2 h-4 w-4" /> Add Vendor
               </Button>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -249,7 +251,7 @@ export default function MastersPage() {
                 <Plus className="mr-2 h-4 w-4" /> Add Account
               </Button>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>

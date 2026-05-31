@@ -116,9 +116,13 @@ export default function ReceiptsPage() {
     if (!selectedReceipt) return;
     try {
       setIsDeleting(true);
-      await deleteReceipt(selectedReceipt.id);
-      setData(prev => ({ ...prev, items: prev.items.filter(r => r.id !== selectedReceipt.id), total: prev.total - 1 }));
-      toast.success("Receipt deleted successfully");
+      const res = await deleteReceipt(selectedReceipt.id);
+      if (res.requested) {
+        toast.success("Deletion request submitted for admin approval");
+      } else {
+        setData(prev => ({ ...prev, items: prev.items.filter(r => r.id !== selectedReceipt.id), total: prev.total - 1 }));
+        toast.success("Receipt deleted successfully");
+      }
       setIsDeleteAlertOpen(false);
     } catch (error) {
       toast.error("Failed to delete receipt");
@@ -131,10 +135,15 @@ export default function ReceiptsPage() {
     if (selectedReceipts.length === 0) return;
     try {
       setIsBulkDeleting(true);
-      await deleteReceipts(selectedReceipts);
-      setData(prev => ({ ...prev, items: prev.items.filter(r => !selectedReceipts.includes(r.id)), total: prev.total - selectedReceipts.length }));
-      setSelectedReceipts([]);
-      toast.success("Receipts deleted successfully");
+      const res = await deleteReceipts(selectedReceipts);
+      if (res.requested) {
+        toast.success("Bulk deletion requests submitted for admin approval");
+        setSelectedReceipts([]);
+      } else {
+        setData(prev => ({ ...prev, items: prev.items.filter(r => !selectedReceipts.includes(r.id)), total: prev.total - selectedReceipts.length }));
+        setSelectedReceipts([]);
+        toast.success("Receipts deleted successfully");
+      }
       setIsBulkDeleteAlertOpen(false);
     } catch (error) {
       toast.error("Failed to delete receipts");
@@ -170,7 +179,7 @@ export default function ReceiptsPage() {
           <h2 className="text-3xl font-bold tracking-tight">Receipts</h2>
           <p className="text-muted-foreground">Manage and track all income receipts.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {selectedReceipts.length > 0 && (
             <Button 
               variant="destructive" 
@@ -234,7 +243,7 @@ export default function ReceiptsPage() {
         </div>
       </div>
 
-      <div className="rounded-md border bg-card shadow-sm">
+      <div className="rounded-md border bg-card shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

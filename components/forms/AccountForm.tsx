@@ -194,7 +194,7 @@ export function AccountForm({ initialData, onSuccess, onCancel, submitAction }: 
         />
       </div>
 
-      <div className="flex justify-end gap-2 pt-4">
+      <div className="flex justify-end gap-2 pt-4 flex-wrap">
         <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
         <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white">
           {isSubmitting ? "Saving..." : initialData ? "Update Account" : "Create Account"}

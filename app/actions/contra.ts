@@ -3,28 +3,74 @@
 import db from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import {
+  postContraLedgerEntries,
+  replaceContraLedgerEntries,
+} from "@/lib/voucher-ledger";
+
+export async function getNextContraNumber(date: string) {
+  const session = await auth();
+  if (!session) throw new Error("Unauthorized");
+
+  const year = new Date(date).getFullYear();
+  const lastContra = await db.contraEntry.findFirst({
+    where: {
+      date: {
+        gte: new Date(`${year}-01-01`),
+        lte: new Date(`${year}-12-31T23:59:59.999Z`),
+      },
+    },
+    orderBy: { entryNo: "desc" },
+  });
+
+  let nextNumber = 1;
+  if (lastContra) {
+    const parts = lastContra.entryNo.split("-");
+    const lastSeq = parseInt(parts[parts.length - 1]);
+    if (!isNaN(lastSeq)) {
+      nextNumber = lastSeq + 1;
+    }
+  }
+
+  return `CON-${year}-${nextNumber.toString().padStart(3, "0")}`;
+}
 
 export async function createContra(data: any) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
 
-  const { 
-    entryNo, 
-    date, 
+  const {
+    entryNo,
+    date,
     transferType,
     fromAccountId,
     toAccountId,
-    amount, 
+    amount,
     reference,
-    narration 
+    narration,
   } = data;
 
+  if (!date || !fromAccountId || !toAccountId || !amount) {
+    throw new Error("Missing required contra fields.");
+  }
+
+  if (fromAccountId === toAccountId) {
+    throw new Error("From and To accounts must be different for a contra transaction.");
+  }
+
   const numAmount = Number(amount);
+  if (numAmount <= 0) {
+    throw new Error("Contra amount must be greater than zero.");
+  }
 
   const result = await db.$transaction(async (tx) => {
+    const contraEntryNo = entryNo?.trim()
+      ? entryNo
+      : await getNextContraNumber(date);
+
     const contra = await tx.contraEntry.create({
       data: {
-        entryNo,
+        entryNo: contraEntryNo,
         date: new Date(date),
         transferType,
         fromAccountId,
@@ -35,26 +81,12 @@ export async function createContra(data: any) {
       },
     });
 
-    await tx.transaction.create({
-      data: {
-        accountId: fromAccountId,
-        debit: 0,
-        credit: numAmount,
-        refType: "CONTRA",
-        refId: contra.id,
-        date: new Date(date),
-      },
-    });
-
-    await tx.transaction.create({
-      data: {
-        accountId: toAccountId,
-        debit: numAmount,
-        credit: 0,
-        refType: "CONTRA",
-        refId: contra.id,
-        date: new Date(date),
-      },
+    await postContraLedgerEntries(tx, {
+      contraId: contra.id,
+      date: new Date(date),
+      amount: numAmount,
+      fromAccountId,
+      toAccountId,
     });
 
     return contra;
@@ -70,24 +102,34 @@ export async function updateContra(id: string, data: any) {
   if (!session) throw new Error("Unauthorized");
   if (!id) throw new Error("Contra ID is required");
 
-  const { 
-    date, 
+  const {
+    date,
     transferType,
     fromAccountId,
     toAccountId,
-    amount, 
+    amount,
     reference,
-    narration 
+    narration,
   } = data;
 
+  if (!date || !fromAccountId || !toAccountId || !amount) {
+    throw new Error("Missing required contra fields.");
+  }
+
+  if (fromAccountId === toAccountId) {
+    throw new Error("From and To accounts must be different for a contra transaction.");
+  }
+
   const numAmount = Number(amount);
-  const contraDate = new Date(date);
+  if (numAmount <= 0) {
+    throw new Error("Contra amount must be greater than zero.");
+  }
 
   const result = await db.$transaction(async (tx) => {
     const contra = await tx.contraEntry.update({
       where: { id },
       data: {
-        date: contraDate,
+        date: new Date(date),
         transferType,
         fromAccountId,
         toAccountId,
@@ -97,34 +139,12 @@ export async function updateContra(id: string, data: any) {
       },
     });
 
-    // Delete existing transactions and recreate them (simpler than updating multiple)
-    await tx.transaction.deleteMany({
-      where: {
-        refId: id,
-        refType: "CONTRA",
-      },
-    });
-
-    await tx.transaction.create({
-      data: {
-        accountId: fromAccountId,
-        debit: 0,
-        credit: numAmount,
-        refType: "CONTRA",
-        refId: contra.id,
-        date: contraDate,
-      },
-    });
-
-    await tx.transaction.create({
-      data: {
-        accountId: toAccountId,
-        debit: numAmount,
-        credit: 0,
-        refType: "CONTRA",
-        refId: contra.id,
-        date: contraDate,
-      },
+    await replaceContraLedgerEntries(tx, {
+      contraId: id,
+      date: new Date(date),
+      amount: numAmount,
+      fromAccountId,
+      toAccountId,
     });
 
     return contra;
@@ -139,6 +159,18 @@ export async function deleteContra(id: string) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
   if (!id) throw new Error("Contra ID is required");
+
+  if ((session.user as any).role !== "ADMIN") {
+    await db.deletionRequest.create({
+      data: {
+        voucherId: id,
+        voucherType: "CONTRA",
+        requestedById: (session.user as any).id,
+        status: "PENDING",
+      },
+    });
+    return { success: true, requested: true };
+  }
 
   await db.$transaction(async (tx) => {
     await tx.transaction.deleteMany({

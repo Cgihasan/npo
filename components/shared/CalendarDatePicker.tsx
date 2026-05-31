@@ -31,12 +31,12 @@ export function CalendarDatePicker({
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            className="justify-start font-normal w-[240px]"
+            className="justify-start font-normal w-full max-w-[240px]"
           >
             {value ? value.toLocaleDateString() : "Select date"}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[240px] overflow-hidden p-0" align="start">
+        <PopoverContent className="w-full max-w-[240px] overflow-hidden p-0" align="start">
           <Calendar
             mode="single"
             selected={value}

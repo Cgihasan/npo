@@ -144,7 +144,7 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
+    <div className="flex min-h-screen items-center justify-center bg-background" suppressHydrationWarning>
       <Suspense
         fallback={
           <div className="w-full max-w-sm space-y-4 rounded-lg bg-card p-6 shadow-lg text-center">

@@ -85,9 +85,13 @@ export default function JournalPage() {
     if (!selectedVoucher) return;
     try {
       setIsDeleting(true);
-      await deleteJournalVoucher(selectedVoucher.id);
-      setData(prev => ({ ...prev, items: prev.items.filter(v => v.id !== selectedVoucher.id), total: prev.total - 1 }));
-      toast.success("Journal voucher deleted successfully");
+      const res = await deleteJournalVoucher(selectedVoucher.id);
+      if (res.requested) {
+        toast.success("Deletion request submitted for admin approval");
+      } else {
+        setData(prev => ({ ...prev, items: prev.items.filter(v => v.id !== selectedVoucher.id), total: prev.total - 1 }));
+        toast.success("Journal voucher deleted successfully");
+      }
       setIsDeleteAlertOpen(false);
     } catch (error) {
       toast.error("Failed to delete journal voucher");
@@ -141,7 +145,7 @@ export default function JournalPage() {
           <h2 className="text-3xl font-bold tracking-tight">Journal Vouchers</h2>
           <p className="text-muted-foreground">Manage and track adjusting entries and non-cash transfers.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" onClick={handleExport} disabled={data.total === 0}>
             <Download className="mr-2 h-4 w-4" /> Export
           </Button>
@@ -165,7 +169,7 @@ export default function JournalPage() {
         </div>
       </div>
 
-      <div className="rounded-md border bg-card shadow-sm">
+      <div className="rounded-md border bg-card shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
