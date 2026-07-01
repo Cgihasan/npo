@@ -63,10 +63,11 @@ export async function getAccountBalances() {
     const totalDebit = acc.transactions.reduce((sum, tx) => sum + tx.debit, 0);
     const totalCredit = acc.transactions.reduce((sum, tx) => sum + tx.credit, 0);
     
-    // Assets (Cash/Bank) and Expenses: Balance = Debit - Credit
-    // Income and Liabilities: Balance = Credit - Debit
+    // Assets (Cash/Bank) and Expenses: Balance = Opening + Debit - Credit
+    // Income and Liabilities: Balance = Opening + Credit - Debit
     const isAssetOrExpense = ["CASH", "BANK", "ASSET", "EXPENSE"].includes(acc.type);
-    const balance = isAssetOrExpense ? (totalDebit - totalCredit) : (totalCredit - totalDebit);
+    const transactionBalance = isAssetOrExpense ? (totalDebit - totalCredit) : (totalCredit - totalDebit);
+    const balance = (acc.balance || 0) + transactionBalance;
 
     return {
       ...acc,
@@ -122,7 +123,7 @@ export async function getDashboardStats() {
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
 
-  const [receiptsTotal, paymentsTotal, cashStats, bankStats] = await Promise.all([
+  const [receiptsTotal, paymentsTotal, cashStats, bankStats, cashOpening, bankOpening] = await Promise.all([
     db.receipt.aggregate({
       _sum: { amount: true }
     }),
@@ -136,11 +137,19 @@ export async function getDashboardStats() {
     db.transaction.aggregate({
       where: { account: { type: "BANK" } },
       _sum: { debit: true, credit: true }
+    }),
+    db.account.aggregate({
+      where: { type: "CASH" },
+      _sum: { balance: true }
+    }),
+    db.account.aggregate({
+      where: { type: "BANK" },
+      _sum: { balance: true }
     })
   ]);
 
-  const cashInHand = (cashStats._sum.debit || 0) - (cashStats._sum.credit || 0);
-  const bankBalance = (bankStats._sum.debit || 0) - (bankStats._sum.credit || 0);
+  const cashInHand = (cashOpening._sum.balance || 0) + (cashStats._sum.debit || 0) - (cashStats._sum.credit || 0);
+  const bankBalance = (bankOpening._sum.balance || 0) + (bankStats._sum.debit || 0) - (bankStats._sum.credit || 0);
 
   return {
     totalReceipts: receiptsTotal._sum.amount || 0,

@@ -56,6 +56,7 @@ export const accountSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   type: z.string().min(1, "Type is required"),
   balance: z.coerce.number().optional(),
+  description: z.string().max(500, "Description too long").optional().nullable(),
 });
 
 export const paymentSchema = z.object({

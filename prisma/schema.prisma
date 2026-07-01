@@ -39,6 +39,7 @@ model Account {
   name         String
   type         String
   balance      Float         @default(0)
+  description  String?
   transactions Transaction[]
 }
 

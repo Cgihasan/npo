@@ -24,6 +24,7 @@ export function AccountForm({ initialData, onSuccess, onCancel, submitAction }: 
   const [name, setName] = useState(initialData?.name || "");
   const [type, setType] = useState(initialData?.type || "");
   const [balance, setBalance] = useState(initialData?.balance !== undefined ? String(initialData.balance) : "");
+  const [description, setDescription] = useState(initialData?.description || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,7 +39,8 @@ export function AccountForm({ initialData, onSuccess, onCancel, submitAction }: 
       const payload = { 
         name, 
         type, 
-        balance: balance ? Number(balance) : 0 
+        balance: balance ? Number(balance) : 0,
+        description
       };
 
       if (initialData?.id) {
@@ -95,6 +97,16 @@ export function AccountForm({ initialData, onSuccess, onCancel, submitAction }: 
           value={balance} 
           onChange={(e) => setBalance(e.target.value)} 
           placeholder="0.00" 
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="description">Description (Optional)</Label>
+        <Input
+          id="description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Add account details or notes"
         />
       </div>
 
