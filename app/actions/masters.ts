@@ -61,6 +61,7 @@ export async function createAccount(data: any) {
       name: validatedData.name,
       type: validatedData.type,
       balance: validatedData.balance || 0,
+      description: validatedData.description,
     }
   });
 }
@@ -93,6 +94,7 @@ export async function updateAccount(id: string, data: any) {
       name: validatedData.name,
       type: validatedData.type,
       balance: validatedData.balance || 0,
+      description: validatedData.description,
     }
   });
 }

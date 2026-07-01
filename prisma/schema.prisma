@@ -27,11 +27,11 @@ model Donor {
 }
 
 model Vendor {
-  id       String    @id @default(cuid())
-  name     String
-  email    String?
-  phone    String?
-  gstin    String?
+  id    String  @id @default(cuid())
+  name  String
+  email String?
+  phone String?
+  gstin String?
 }
 
 model Account {
@@ -39,6 +39,7 @@ model Account {
   name         String
   type         String
   balance      Float         @default(0)
+  description  String?
   transactions Transaction[]
 }
 
@@ -105,10 +106,10 @@ model Transaction {
 }
 
 model JournalVoucher {
-  id          String   @id @default(cuid())
-  voucherNo   String   @unique
-  date        DateTime
-  narration   String?
-  attachment  String?
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  voucherNo  String   @unique
+  date       DateTime
+  narration  String?
+  attachment String?
+  createdAt  DateTime @default(now())
 }
