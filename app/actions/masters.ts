@@ -80,7 +80,7 @@ export async function createVendor(data: { name: string; email?: string; phone?:
   return await db.vendor.create({ data });
 }
 
-export async function createAccount(data: { type: string; category?: string; accountType?: string; balance?: number }) {
+export async function createAccount(data: { type: string; category?: string; accountType?: string; description?: string; balance?: number }) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
   return await db.account.create({ 
@@ -88,6 +88,7 @@ export async function createAccount(data: { type: string; category?: string; acc
       type: data.type,
       category: data.category || null,
       accountType: data.accountType || null,
+      description: data.description || null,
       balance: data.balance || 0,
     }
   });
@@ -195,7 +196,7 @@ export async function updateVendor(id: string, data: { name: string; email?: str
   return await db.vendor.update({ where: { id }, data });
 }
 
-export async function updateAccount(id: string, data: { type: string; category?: string; accountType?: string; balance?: number }) {
+export async function updateAccount(id: string, data: { type: string; category?: string; accountType?: string; description?: string; balance?: number }) {
   const session = await auth();
   if (!session) throw new Error("Unauthorized");
   return await db.account.update({ 
@@ -204,6 +205,7 @@ export async function updateAccount(id: string, data: { type: string; category?:
       type: data.type,
       category: data.category || null,
       accountType: data.accountType || null,
+      description: data.description || null,
       balance: data.balance || 0,
     }
   });

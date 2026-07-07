@@ -257,15 +257,16 @@ export default function MastersPage() {
                   <TableRow>
                     <TableHead>Group</TableHead>
                     <TableHead>Ledger</TableHead>
+                    <TableHead>Description</TableHead>
                     <TableHead className="text-right">Opening Balance</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
-                    <TableRow><TableCell colSpan={4} className="text-center">Loading...</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5} className="text-center">Loading...</TableCell></TableRow>
                   ) : accounts.length === 0 ? (
-                    <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground">No accounts found.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No accounts found.</TableCell></TableRow>
                   ) : accounts.map((acc) => (
                     <TableRow key={acc.id}>
                       <TableCell>
@@ -274,6 +275,11 @@ export default function MastersPage() {
                       <TableCell className="font-medium">
                         {getAccountLedger(acc) ?? (
                           <span className="text-muted-foreground font-normal">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {acc.description ?? (
+                          <span className="font-normal">—</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right font-bold tabular-nums">

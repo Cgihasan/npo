@@ -78,7 +78,8 @@ export function AccountForm({ initialData, onSuccess, onCancel, submitAction }: 
   const [type, setType] = useState(initialData?.type || "");
   const [category, setCategory] = useState(initialData?.category || "");
   const [accountType, setAccountType] = useState(initialData?.accountType || "");
-  const [balance, setBalance] = useState(initialData?.balance !== undefined ? String(initialData.balance) : "");
+  const [description, setDescription] = useState(initialData?.description || "");
+  const [balance, setBalance] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isCashOrBank = type === "CASH" || type === "BANK";
@@ -97,7 +98,8 @@ export function AccountForm({ initialData, onSuccess, onCancel, submitAction }: 
     try {
       const payload: any = { 
         type,
-        balance: balance ? Number(balance) : 0 
+        balance: balance ? Number(balance) : 0,
+        description: description || null
       };
 
       if (showCategory) {
@@ -153,6 +155,17 @@ export function AccountForm({ initialData, onSuccess, onCancel, submitAction }: 
           </Select>
         </div>
       )}
+
+      <div className="space-y-2">
+        <Label htmlFor="description">Description</Label>
+        <textarea
+          id="description"
+          className="flex h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="e.g., Bank opening balance 10,000/-, Main donation account, etc."
+        />
+      </div>
 
       {showAccountTypeInput && (
         <div className="space-y-2">
