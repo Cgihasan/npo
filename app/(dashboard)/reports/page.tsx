@@ -16,7 +16,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Search, Loader2, BookOpen, Plus, Minus } from "lucide-react";
+import { Search, Loader2, BookOpen, Plus, Minus, Download } from "lucide-react";
+import { exportToExcel } from "@/lib/export-excel";
+import { toast } from "sonner";
 
 const VOUCHER_STYLES: Record<string, { label: string; badge: string; text: string }> = {
   RECEIPT: {
@@ -141,6 +143,31 @@ export default function DayBookPage() {
     setEndDate(format(now, "yyyy-MM-dd"));
   };
 
+  const handleExport = () => {
+    try {
+      if (entries.length === 0) {
+        toast.error("No data to export");
+        return;
+      }
+
+      const exportData = entries.map((e) => ({
+        "Date": format(new Date(e.date), "dd/MM/yyyy"),
+        "Voucher No.": e.voucherNo,
+        "Voucher Type": e.voucherType,
+        "Particulars": e.particulars,
+        "Accounts Involved": e.accountsInvolved,
+        "Amount (₹)": e.amount,
+      }));
+
+      const fileName = `Day_Book_${startDate}_to_${endDate}`;
+      exportToExcel(exportData, fileName);
+      toast.success("Excel exported successfully!");
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast.error("Failed to export Excel.");
+    }
+  };
+
   return (
     <div className="space-y-6 p-4 md:p-8">
       {/* Header */}
@@ -156,6 +183,14 @@ export default function DayBookPage() {
             </p>
           </div>
         </div>
+        <Button
+          variant="outline"
+          onClick={handleExport}
+          disabled={isLoading || entries.length === 0}
+        >
+          <Download className="mr-2 h-4 w-4" />
+          Export Excel
+        </Button>
       </div>
 
       {/* Filters */}
